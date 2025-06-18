@@ -1,3 +1,4 @@
+// src/main/java/com/promptdex/api/controller/PromptController.java
 package com.promptdex.api.controller;
 
 import com.promptdex.api.dto.CreatePromptRequest;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.nio.file.AccessDeniedException;
 import java.util.List;
-import java.util.UUID; // Import UUID
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/prompts")
@@ -31,7 +32,6 @@ public class PromptController {
         return ResponseEntity.ok(prompts);
     }
 
-    // Use UUID in the path variable
     @GetMapping("/{id}")
     public ResponseEntity<PromptDto> getPromptById(@PathVariable UUID id) {
         PromptDto prompt = promptService.getPromptById(id);
@@ -45,15 +45,15 @@ public class PromptController {
         return new ResponseEntity<>(createdPrompt, HttpStatus.CREATED);
     }
 
-    // Use UUID in the path variable
+    // --- NEW METHOD START ---
     @PutMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PromptDto> updatePrompt(@PathVariable UUID id, @Valid @RequestBody CreatePromptRequest request, @AuthenticationPrincipal UserDetails userDetails) throws AccessDeniedException {
         PromptDto updatedPrompt = promptService.updatePrompt(id, request, userDetails.getUsername());
         return ResponseEntity.ok(updatedPrompt);
     }
+    // --- NEW METHOD END ---
 
-    // Use UUID in the path variable
     @DeleteMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deletePrompt(@PathVariable UUID id, @AuthenticationPrincipal UserDetails userDetails) throws AccessDeniedException {

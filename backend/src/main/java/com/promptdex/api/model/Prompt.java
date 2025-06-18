@@ -9,8 +9,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList; // <-- IMPORT
-import java.util.List;      // <-- IMPORT
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -27,25 +27,36 @@ public class Prompt {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    // --- MODIFICATION START ---
+    // Explicitly mapping column names to avoid any naming strategy ambiguity.
+    // By convention, Spring JPA maps camelCase (promptText) to snake_case (prompt_text).
+    // Let's make this explicit for clarity and safety.
+
+    @Column(name = "prompt_text", nullable = false, columnDefinition = "TEXT")
     private String promptText;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
+    @Column(name = "target_ai_model", nullable = false)
     private String targetAiModel;
+    // --- MODIFICATION END ---
 
     @Column(nullable = false)
     private String category;
 
+    // --- CRITICAL FIX START ---
+    // Here we explicitly define the database column names for our timestamps.
+    // This is the most likely source of the error.
     @CreationTimestamp
-    @Column(updatable = false, nullable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(nullable = false)
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+    // --- CRITICAL FIX END ---
+
 
     // --- Relationships ---
 
@@ -53,12 +64,11 @@ public class Prompt {
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
 
-    // --- ADD THIS ENTIRE SECTION ---
     @OneToMany(
-            mappedBy = "prompt", // "prompt" is the field name in the Review entity that links back to this Prompt
-            cascade = CascadeType.ALL, // Operations (like delete) on a Prompt will cascade to its Reviews
-            orphanRemoval = true,      // If a Review is removed from this list, it's deleted from the DB
-            fetch = FetchType.LAZY     // Don't load reviews from the DB unless explicitly asked for
+            mappedBy = "prompt",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
     )
-    private List<Review> reviews = new ArrayList<>(); // Initialize to prevent NullPointerExceptions
+    private List<Review> reviews = new ArrayList<>();
 }

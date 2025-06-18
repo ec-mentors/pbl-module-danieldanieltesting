@@ -1,3 +1,4 @@
+// frontend/src/App.jsx
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -16,6 +17,9 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import PromptsListPage from './pages/PromptsListPage.jsx';
 import PromptDetailPage from './pages/PromptDetailPage.jsx';
 import CreatePromptPage from './pages/CreatePromptPage.jsx';
+// --- NEW IMPORT START ---
+import EditPromptPage from './pages/EditPromptPage.jsx';
+// --- NEW IMPORT END ---
 
 function App() {
   return (
@@ -52,6 +56,9 @@ function App() {
           {/* --- Protected Routes --- */}
           <Route element={<ProtectedRoute />}>
             <Route path="/create-prompt" element={<CreatePromptPage />} />
+            {/* --- NEW ROUTE START --- */}
+            <Route path="/prompts/:id/edit" element={<EditPromptPage />} />
+            {/* --- NEW ROUTE END --- */}
             {/* Future protected routes like /profile would go here */}
           </Route>
           

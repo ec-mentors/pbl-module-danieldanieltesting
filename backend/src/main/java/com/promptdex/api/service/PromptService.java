@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.AccessDeniedException;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
@@ -58,12 +60,8 @@ public class PromptService {
         prompt.setCategory(request.category());
         prompt.setAuthor(user);
 
-        // --- THE FIX IS HERE ---
-        // Use saveAndFlush to force the SQL INSERT and immediately populate
-        // the @CreationTimestamp and @UpdateTimestamp fields on the entity instance.
         Prompt savedPrompt = promptRepository.saveAndFlush(prompt);
 
-        // Now, when we call convertToDto, savedPrompt is guaranteed to have non-null timestamps.
         return convertToDto(savedPrompt);
     }
 
@@ -98,7 +96,18 @@ public class PromptService {
         promptRepository.delete(prompt);
     }
 
+    // --- MODIFIED AND CORRECTED HELPER METHOD ---
     private PromptDto convertToDto(Prompt prompt) {
+        // --- DEFENSIVE NULL-CHECKING START ---
+        // This prevents NullPointerExceptions if a timestamp is ever null in the entity.
+        LocalDateTime createdAt = prompt.getCreatedAt();
+        LocalDateTime updatedAt = prompt.getUpdatedAt();
+
+        Instant createdAtInstant = (createdAt != null) ? createdAt.toInstant(ZoneOffset.UTC) : null;
+        Instant updatedAtInstant = (updatedAt != null) ? updatedAt.toInstant(ZoneOffset.UTC) : null;
+        // --- DEFENSIVE NULL-CHECKING END ---
+
+
         List<Review> reviews = prompt.getReviews();
 
         Double averageRating = (reviews != null && !reviews.isEmpty())
@@ -110,13 +119,19 @@ public class PromptService {
 
         List<ReviewDto> reviewDtos = (reviews != null)
                 ? reviews.stream()
-                .map(review -> new ReviewDto(
-                        review.getId(),
-                        review.getRating(),
-                        review.getComment(),
-                        review.getUser().getUsername(),
-                        review.getCreatedAt().toInstant(ZoneOffset.UTC)
-                ))
+                .map(review -> {
+                    // Also adding a null check for review timestamps for robustness
+                    LocalDateTime reviewCreatedAt = review.getCreatedAt();
+                    Instant reviewCreatedAtInstant = (reviewCreatedAt != null) ? reviewCreatedAt.toInstant(ZoneOffset.UTC) : null;
+
+                    return new ReviewDto(
+                            review.getId(),
+                            review.getRating(),
+                            review.getComment(),
+                            review.getUser().getUsername(),
+                            reviewCreatedAtInstant
+                    );
+                })
                 .collect(Collectors.toList())
                 : Collections.emptyList();
 
@@ -128,8 +143,8 @@ public class PromptService {
                 prompt.getTargetAiModel(),
                 prompt.getCategory(),
                 prompt.getAuthor().getUsername(),
-                prompt.getCreatedAt().toInstant(ZoneOffset.UTC),
-                prompt.getUpdatedAt().toInstant(ZoneOffset.UTC),
+                createdAtInstant,   // Pass the safe, potentially null Instant
+                updatedAtInstant,   // Pass the safe, potentially null Instant
                 averageRating,
                 reviewDtos
         );
