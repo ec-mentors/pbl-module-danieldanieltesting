@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import BookmarkButton from './BookmarkButton';
 
 const StarRating = ({ rating }) => {
   const numericRating = Number(rating) || 0;
@@ -19,25 +21,45 @@ const StarRating = ({ rating }) => {
 };
 
 const PromptCard = ({ prompt }) => {
+  const { isAuthenticated } = useContext(AuthContext);
+
   return (
-    <div className="flex flex-col p-6 bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow duration-300 h-full">
-      <div className="flex-grow">
-        {/* The main content area links to the prompt's detail page */}
-        <Link to={`/prompts/${prompt.id}`}>
+    // Added 'relative' to allow absolute positioning of the bookmark button
+    <div className="relative flex flex-col p-6 bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow duration-300 h-full">
+      {/* --- NEW: Bookmark Button --- */}
+      {/* Conditionally render the button only if the user is logged in */}
+      {isAuthenticated && (
+        <div className="absolute top-2 right-2 z-10">
+          <BookmarkButton
+            promptId={prompt.id}
+            initialIsBookmarked={prompt.isBookmarked}
+          />
+        </div>
+      )}
+      
+      {/* The rest of the card now lives inside one Link for better accessibility */}
+      <Link to={`/prompts/${prompt.id}`} className="flex flex-col flex-grow">
+        <div className="flex-grow">
           <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 break-words hover:text-blue-700 transition-colors">
             {prompt.title}
           </h5>
-        </Link>
-        <p className="font-normal text-gray-700 mt-2 line-clamp-3">{prompt.description}</p>
-      </div>
+          <p className="font-normal text-gray-700 mt-2 line-clamp-3">{prompt.description}</p>
+        </div>
 
-      {/* The footer contains metadata, including a link to the user's profile */}
-      <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-        <p className="text-sm text-gray-500">
-          By: <Link to={`/profile/${prompt.authorUsername}`} className="font-medium text-blue-600 hover:underline">{prompt.authorUsername}</Link>
-        </p>
-        <StarRating rating={prompt.averageRating} />
-      </div>
+        <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
+          <p className="text-sm text-gray-500">
+            By: <Link 
+              to={`/profile/${prompt.authorUsername}`} 
+              // Stop the click from bubbling up to the main card's navigation
+              onClick={e => e.stopPropagation()} 
+              className="font-medium text-blue-600 hover:underline"
+            >
+              {prompt.authorUsername}
+            </Link>
+          </p>
+          <StarRating rating={prompt.averageRating} />
+        </div>
+      </Link>
     </div>
   );
 };

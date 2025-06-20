@@ -11,15 +11,6 @@ import java.util.UUID;
 
 public interface PromptRepository extends JpaRepository<Prompt, UUID> {
 
-    /**
-     * Finds a paginated list of prompts, optionally filtered by a search term.
-     * The search is case-insensitive and checks the prompt's title, description, and text.
-     * If the search term is null or empty, it returns all prompts (paginated).
-     *
-     * @param searchTerm The term to search for. Can be null or empty.
-     * @param pageable   The pagination information (page number, size, sort order).
-     * @return A Page of Prompts matching the criteria.
-     */
     @Query("SELECT p FROM Prompt p WHERE " +
             "(:searchTerm IS NULL OR :searchTerm = '' OR " +
             "LOWER(p.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
@@ -27,13 +18,15 @@ public interface PromptRepository extends JpaRepository<Prompt, UUID> {
             "LOWER(p.promptText) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
     Page<Prompt> searchAndPagePrompts(@Param("searchTerm") String searchTerm, Pageable pageable);
 
-    /**
-     * Finds a paginated list of prompts created by a specific user.
-     *
-     * @param username The username of the author.
-     * @param pageable The pagination information.
-     * @return A Page of Prompts by the given author.
-     */
     Page<Prompt> findByAuthor_Username(String username, Pageable pageable);
 
+    /**
+     * Finds a paginated list of prompts that have been bookmarked by a specific user.
+     * This query traverses the many-to-many relationship.
+     *
+     * @param username The username of the user whose bookmarks are being fetched.
+     * @param pageable The pagination information.
+     * @return A Page of bookmarked Prompts.
+     */
+    Page<Prompt> findByBookmarkedByUsers_Username(String username, Pageable pageable);
 }
