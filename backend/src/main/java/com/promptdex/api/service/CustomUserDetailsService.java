@@ -1,31 +1,35 @@
 package com.promptdex.api.service;
 
 import com.promptdex.api.repository.UserRepository;
-import org.springframework.security.core.userdetails.User;
+import com.promptdex.api.security.UserPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
-    // Use constructor injection for dependencies.
     public CustomUserDetailsService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
     @Override
+    @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Find the user from the database.
-        com.promptdex.api.model.User appUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+        // Find the user from the database by username or email. This is correct.
+        com.promptdex.api.model.User user = userRepository.findByUsername(username)
+                .orElseGet(() -> userRepository.findByEmail(username)
+                        .orElseThrow(() -> new UsernameNotFoundException("User not found with username or email: " + username)));
 
-        // Return a Spring Security User object.
-        return new User(appUser.getUsername(), appUser.getPassword(), new ArrayList<>()); // We will add roles later.
+        // --- THE FIX IS HERE ---
+        // We REMOVE the provider check. A valid JWT means the user is authenticated,
+        // regardless of how they initially registered. This service's only job now
+        // is to load the found user's details for the security context.
+
+        return new UserPrincipal(user);
     }
 }
