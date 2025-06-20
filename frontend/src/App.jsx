@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext'; // Make sure this is imported if not already
+import { AuthProvider } from './context/AuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -14,11 +14,11 @@ import PromptDetailPage from './pages/PromptDetailPage.jsx';
 import CreatePromptPage from './pages/CreatePromptPage.jsx';
 import EditPromptPage from './pages/EditPromptPage.jsx';
 import UserProfilePage from './pages/UserProfilePage.jsx';
-import BookmarkedPromptsPage from './pages/BookmarkedPromptsPage.jsx'; // <-- IMPORT NEW PAGE
+import BookmarkedPromptsPage from './pages/BookmarkedPromptsPage.jsx';
+import OAuth2RedirectHandler from './pages/OAuth2RedirectHandler.jsx'; // --- IMPORT NEW PAGE ---
 
 function App() {
   return (
-    // Wrap entire app in AuthProvider so all components can access auth state
     <AuthProvider>
       <BrowserRouter>
         <ToastContainer
@@ -45,12 +45,13 @@ function App() {
             <Route path="/prompts" element={<PromptsListPage />} />
             <Route path="/prompts/:id" element={<PromptDetailPage />} />
             <Route path="/profile/:username" element={<UserProfilePage />} />
+            {/* --- NEW OAUTH2 REDIRECT ROUTE --- */}
+            <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
 
             {/* --- Protected Routes --- */}
             <Route element={<ProtectedRoute />}>
               <Route path="/create-prompt" element={<CreatePromptPage />} />
               <Route path="/prompts/:id/edit" element={<EditPromptPage />} />
-              {/* --- NEW PROTECTED ROUTE FOR BOOKMARKS --- */}
               <Route path="/bookmarks" element={<BookmarkedPromptsPage />} />
             </Route>
             

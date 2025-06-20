@@ -1,7 +1,10 @@
-// src/main/java/com/promptdex/api/config/SecurityConfig.java
 package com.promptdex.api.config;
 
 import com.promptdex.api.security.JwtAuthenticationFilter;
+import com.promptdex.api.security.oauth2.CustomOAuth2UserService;
+import com.promptdex.api.security.oauth2.CustomOidcUserService;
+import com.promptdex.api.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
+import com.promptdex.api.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.promptdex.api.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,32 +23,37 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import static org.springframework.security.config.Customizer.withDefaults; // We only need this one HttpSecurity import
-
 import java.util.Arrays;
 import java.util.List;
 
+import static org.springframework.security.config.Customizer.withDefaults;
+
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // This enables @PreAuthorize annotations in controllers
+@EnableMethodSecurity
 public class SecurityConfig {
 
-    // No changes needed in the constructor or fields
-    private final CustomUserDetailsService customUserDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOidcUserService customOidcUserService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
-    public SecurityConfig(CustomUserDetailsService customUserDetailsService, JwtAuthenticationFilter jwtAuthenticationFilter) {
-        this.customUserDetailsService = customUserDetailsService;
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          CustomOAuth2UserService customOAuth2UserService,
+                          CustomOidcUserService customOidcUserService,
+                          OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
+                          HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.customOAuth2UserService = customOAuth2UserService;
+        this.customOidcUserService = customOidcUserService;
+        this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
+        this.httpCookieOAuth2AuthorizationRequestRepository = httpCookieOAuth2AuthorizationRequestRepository;
     }
 
-    // No changes needed here
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
-    // No changes needed here
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
@@ -54,38 +62,50 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(withDefaults()) // This correctly tells Spring to use the corsConfigurationSource bean below
+                .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
+                .formLogin(formLogin -> formLogin.disable()) // Explicitly disable the default form login page
+                .httpBasic(httpBasic -> httpBasic.disable()) // Disable basic auth
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // <-- CHANGE HERE: Explicitly permit all preflight OPTIONS requests.
-                        // This ensures the browser's CORS check passes through the security filter.
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Your existing rules are perfect
+                        // Public GET requests are allowed
+                        .requestMatchers(HttpMethod.GET, "/api/prompts", "/api/prompts/**", "/api/tags").permitAll()
+                        // Local authentication (register/login) is allowed
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/prompts", "/api/prompts/**").permitAll()
+                        // The entire OAuth2 flow must be public
+                        .requestMatchers("/oauth2/**", "/login/oauth2/code/*").permitAll()
+                        // Any other request must be authenticated
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(authEndpoint -> authEndpoint
+                                .baseUri("/oauth2/authorize") // The URL our frontend links to
+                                .authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)
+                        )
+                        .redirectionEndpoint(redirectionEndpoint -> redirectionEndpoint
+                                // The URL Google/GitHub redirects back to
+                                .baseUri("/login/oauth2/code/*")
+                        )
+                        .userInfoEndpoint(userInfoEndpoint -> userInfoEndpoint
+                                .oidcUserService(customOidcUserService) // For Google (OIDC)
+                                .userService(customOAuth2UserService)   // For GitHub (OAuth2)
+                        )
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                 );
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        // <-- CRITICAL FIX HERE: Change the allowed origin to your Vite frontend's port
         configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-
-        // Your existing configuration is perfect
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Cache-Control"));
         configuration.setAllowCredentials(true);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", configuration);
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }
