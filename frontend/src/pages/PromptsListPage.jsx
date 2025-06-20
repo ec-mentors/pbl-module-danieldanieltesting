@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getPrompts, getTags } from '../services/api';
 import Spinner from '../components/Spinner.jsx';
 import PromptCard from '../components/PromptCard.jsx';
 import Select from 'react-select';
-import { useDebounce } from '../hooks/useDebounce'; // Assuming a useDebounce hook exists
+import { useDebounce } from '../hooks/useDebounce';
 
 const PromptsListPage = () => {
   const [prompts, setPrompts] = useState([]);
@@ -20,7 +20,12 @@ const PromptsListPage = () => {
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const [availableTags, setAvailableTags] = useState([]);
-  const selectedTags = tagParams ? tagParams.split(',').map(tag => ({ value: tag, label: tag })) : [];
+
+  // --- FIX: USE useMemo TO PREVENT RE-CREATING THE ARRAY ON EVERY RENDER ---
+  const selectedTags = useMemo(() => {
+    if (!tagParams) return [];
+    return tagParams.split(',').map(tag => ({ value: tag, label: tag }));
+  }, [tagParams]);
 
   const PAGE_SIZE = 12;
 
@@ -38,7 +43,7 @@ const PromptsListPage = () => {
 
   const fetchPrompts = useCallback(async (isNewSearch) => {
     const currentPage = isNewSearch ? 0 : page;
-    isNewSearch ? setLoading(true) : setLoadingMore(true);
+    if (isNewSearch) setLoading(true); else setLoadingMore(true);
     setError(null);
 
     try {
@@ -46,7 +51,7 @@ const PromptsListPage = () => {
         search: debouncedSearchTerm,
         page: currentPage,
         size: PAGE_SIZE,
-        tags: selectedTags.map(t => t.value).join(',') || null
+        tags: selectedTags.length > 0 ? selectedTags.map(t => t.value).join(',') : null
       };
       
       const response = await getPrompts(params);
@@ -58,11 +63,12 @@ const PromptsListPage = () => {
     } catch (err) {
       setError('Failed to fetch prompts. Please try again later.');
     } finally {
-      isNewSearch ? setLoading(false) : setLoadingMore(false);
+      if (isNewSearch) setLoading(false); else setLoadingMore(false);
     }
-  }, [debouncedSearchTerm, selectedTags, page]);
+  }, [debouncedSearchTerm, page, selectedTags]); // selectedTags is now stable
 
   useEffect(() => {
+    // This effect now correctly runs only when search term or tags actually change.
     fetchPrompts(true);
   }, [debouncedSearchTerm, selectedTags]);
 

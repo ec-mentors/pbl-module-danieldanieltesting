@@ -12,12 +12,25 @@ import java.util.UUID;
 
 public interface PromptRepository extends JpaRepository<Prompt, UUID> {
 
-    @Query("SELECT DISTINCT p FROM Prompt p LEFT JOIN p.tags t WHERE " +
+    /**
+     * Searches for prompts with pagination and filtering by search term and tags.
+     * This query is optimized to prevent the N+1 problem by fetching the author
+     * and tags relationships in the same query as the prompts.
+     */
+    @Query(value = "SELECT DISTINCT p FROM Prompt p " +
+            "LEFT JOIN FETCH p.author " +
+            "LEFT JOIN FETCH p.tags t WHERE " +
             "(:searchTerm IS NULL OR :searchTerm = '' OR " +
             "LOWER(p.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
             "LOWER(p.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
             "LOWER(p.promptText) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) AND " +
-            "(:tags IS NULL OR t.name IN :tags)")
+            "(:tags IS NULL OR t.name IN :tags)",
+            countQuery = "SELECT COUNT(DISTINCT p) FROM Prompt p LEFT JOIN p.tags t WHERE " +
+                    "(:searchTerm IS NULL OR :searchTerm = '' OR " +
+                    "LOWER(p.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+                    "LOWER(p.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+                    "LOWER(p.promptText) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) AND " +
+                    "(:tags IS NULL OR t.name IN :tags)")
     Page<Prompt> searchAndPagePrompts(
             @Param("searchTerm") String searchTerm,
             @Param("tags") List<String> tags,
