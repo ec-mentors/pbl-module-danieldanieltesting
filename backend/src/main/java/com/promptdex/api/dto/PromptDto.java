@@ -42,6 +42,9 @@ public record PromptDto(
         List<ReviewDto> reviews,
 
         // --- NEW FIELD ---
+        @JsonProperty("tags")
+        List<String> tags,
+
         @JsonProperty("isBookmarked")
         boolean isBookmarked
 ) {}

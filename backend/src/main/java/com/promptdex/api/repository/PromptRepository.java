@@ -7,26 +7,24 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface PromptRepository extends JpaRepository<Prompt, UUID> {
 
-    @Query("SELECT p FROM Prompt p WHERE " +
+    @Query("SELECT DISTINCT p FROM Prompt p LEFT JOIN p.tags t WHERE " +
             "(:searchTerm IS NULL OR :searchTerm = '' OR " +
             "LOWER(p.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
             "LOWER(p.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-            "LOWER(p.promptText) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
-    Page<Prompt> searchAndPagePrompts(@Param("searchTerm") String searchTerm, Pageable pageable);
+            "LOWER(p.promptText) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) AND " +
+            "(:tags IS NULL OR t.name IN :tags)")
+    Page<Prompt> searchAndPagePrompts(
+            @Param("searchTerm") String searchTerm,
+            @Param("tags") List<String> tags,
+            Pageable pageable
+    );
 
     Page<Prompt> findByAuthor_Username(String username, Pageable pageable);
 
-    /**
-     * Finds a paginated list of prompts that have been bookmarked by a specific user.
-     * This query traverses the many-to-many relationship.
-     *
-     * @param username The username of the user whose bookmarks are being fetched.
-     * @param pageable The pagination information.
-     * @return A Page of bookmarked Prompts.
-     */
     Page<Prompt> findByBookmarkedByUsers_Username(String username, Pageable pageable);
 }

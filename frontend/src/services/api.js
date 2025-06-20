@@ -29,4 +29,32 @@ api.interceptors.request.use(
   }
 );
 
+// --- NEW CENTRALIZED API FUNCTIONS ---
+
+// Fetch a paginated and filtered list of prompts
+export const getPrompts = (params) => {
+  return api.get('/prompts', { params });
+};
+
+// Create a new prompt (core data only)
+export const createPrompt = (promptData) => {
+  return api.post('/prompts', promptData);
+};
+
+// Update a prompt (core data only)
+export const updatePrompt = (promptId, promptData) => {
+  return api.put(`/prompts/${promptId}`, promptData);
+};
+
+// Fetch all available tags
+export const getTags = () => {
+  return api.get('/tags');
+};
+
+// Update the tags for a specific prompt
+export const updatePromptTags = (promptId, tagNames) => {
+  return api.post(`/prompts/${promptId}/tags`, tagNames);
+};
+
+
 export default api;
