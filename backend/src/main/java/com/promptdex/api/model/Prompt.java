@@ -21,8 +21,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "prompts")
-@EqualsAndHashCode(exclude = "bookmarkedByUsers") // Prevent recursion
-@ToString(exclude = "bookmarkedByUsers") // Prevent recursion
+@EqualsAndHashCode(exclude = {"bookmarkedByUsers", "tags"}) // Prevent recursion
+@ToString(exclude = {"bookmarkedByUsers", "tags"}) // Prevent recursion
 public class Prompt {
 
     @Id
@@ -64,7 +64,15 @@ public class Prompt {
     )
     private List<Review> reviews = new ArrayList<>();
 
-    // --- NEW RELATIONSHIP (INVERSE SIDE) ---
     @ManyToMany(mappedBy = "bookmarkedPrompts", fetch = FetchType.LAZY)
     private Set<User> bookmarkedByUsers = new HashSet<>();
+
+    // --- NEW TAGS RELATIONSHIP ---
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "prompt_tags",
+            joinColumns = @JoinColumn(name = "prompt_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<Tag> tags = new HashSet<>();
 }

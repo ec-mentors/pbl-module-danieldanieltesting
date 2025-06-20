@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { createPrompt, getTags, updatePromptTags } from '../services/api';
 import { toast } from 'react-toastify';
+import CreatableSelect from 'react-select/creatable';
 
 const CreatePromptPage = () => {
   const [title, setTitle] = useState('');
@@ -9,9 +10,26 @@ const CreatePromptPage = () => {
   const [description, setDescription] = useState('');
   const [model, setModel] = useState('');
   const [category, setCategory] = useState('');
+  const [tags, setTags] = useState([]); // State for selected tags
+  const [tagOptions, setTagOptions] = useState([]); // State for available tag options
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  // Fetch existing tags to suggest to the user
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const response = await getTags();
+        const options = response.data.map(tag => ({ value: tag, label: tag }));
+        setTagOptions(options);
+      } catch (err) {
+        console.error("Failed to fetch tags", err);
+        // Not a critical error, so we don't block the form
+      }
+    };
+    fetchTags();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,16 +42,23 @@ const CreatePromptPage = () => {
 
     setLoading(true);
     try {
+      // Step 1: Create the prompt with its core data
       const promptData = { title, text, description, model, category };
-      await api.post('/prompts', promptData);
+      const response = await createPrompt(promptData);
+      const newPrompt = response.data;
+
+      // Step 2: If there are tags, update the newly created prompt with them
+      if (tags && tags.length > 0) {
+        const tagNames = tags.map(tag => tag.value);
+        await updatePromptTags(newPrompt.id, tagNames);
+      }
+
       toast.success('Prompt created successfully!');
       navigate('/prompts');
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message);
-      } else {
-        setError('Failed to create prompt. Please check your connection and try again.');
-      }
+      const errorMessage = err.response?.data?.message || 'Failed to create prompt. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
       console.error('Error creating prompt:', err);
     } finally {
       setLoading(false);
@@ -41,11 +66,11 @@ const CreatePromptPage = () => {
   };
 
   return (
-    // Responsive padding: p-4 on small screens, p-8 on medium screens and up
     <div className="max-w-2xl mx-auto mt-10 p-4 md:p-8 bg-white rounded-lg shadow-md">
       <h1 className="text-3xl font-bold text-center mb-6">Create a New Prompt</h1>
       
       <form onSubmit={handleSubmit} noValidate>
+        {/* ... Title, Description, Category, Model fields are unchanged ... */}
         <div className="mb-4">
           <label htmlFor="title" className="block text-gray-700 text-sm font-bold mb-2">Title</label>
           <input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 border rounded-md" />
@@ -64,6 +89,22 @@ const CreatePromptPage = () => {
             <input id="model" type="text" value={model} onChange={(e) => setModel(e.target.value)} className="w-full px-3 py-2 border rounded-md" placeholder="e.g., GPT-4" />
           </div>
         </div>
+
+        {/* --- NEW TAGS FIELD --- */}
+        <div className="mb-4">
+          <label htmlFor="tags" className="block text-gray-700 text-sm font-bold mb-2">Tags</label>
+          <CreatableSelect
+            isMulti
+            id="tags"
+            instanceId="tags-create"
+            value={tags}
+            onChange={setTags}
+            options={tagOptions}
+            placeholder="Add tags (e.g., scifi, character, python)"
+            classNamePrefix="react-select"
+          />
+        </div>
+
         <div className="mb-6">
           <label htmlFor="text" className="block text-gray-700 text-sm font-bold mb-2">Full Prompt Text</label>
           <textarea id="text" rows="8" value={text} onChange={(e) => setText(e.target.value)} className="w-full px-3 py-2 border rounded-md"></textarea>

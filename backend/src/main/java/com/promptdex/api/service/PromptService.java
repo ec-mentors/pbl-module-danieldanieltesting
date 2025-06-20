@@ -6,6 +6,7 @@ import com.promptdex.api.dto.ReviewDto;
 import com.promptdex.api.exception.ResourceNotFoundException;
 import com.promptdex.api.model.Prompt;
 import com.promptdex.api.model.Review;
+import com.promptdex.api.model.Tag;
 import com.promptdex.api.model.User;
 import com.promptdex.api.repository.PromptRepository;
 import com.promptdex.api.repository.UserRepository;
@@ -21,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.AccessDeniedException;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
@@ -34,10 +34,12 @@ public class PromptService {
 
     private final PromptRepository promptRepository;
     private final UserRepository userRepository;
+    private final TagService tagService; // --- NEW DEPENDENCY ---
 
-    public PromptService(PromptRepository promptRepository, UserRepository userRepository) {
+    public PromptService(PromptRepository promptRepository, UserRepository userRepository, TagService tagService) {
         this.promptRepository = promptRepository;
         this.userRepository = userRepository;
+        this.tagService = tagService;
     }
 
     private Set<UUID> getBookmarkedPromptIds(UserDetails userDetails) {
@@ -54,15 +56,38 @@ public class PromptService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PromptDto> searchAndPagePrompts(String searchTerm, int page, int size, UserDetails userDetails) {
+    public Page<PromptDto> searchAndPagePrompts(String searchTerm, List<String> tags, int page, int size, UserDetails userDetails) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Prompt> promptPage = promptRepository.searchAndPagePrompts(searchTerm, pageable);
+        // Normalize tags for query
+        List<String> lowerCaseTags = (tags != null && !tags.isEmpty()) ? tags.stream().map(String::toLowerCase).collect(Collectors.toList()) : null;
+        Page<Prompt> promptPage = promptRepository.searchAndPagePrompts(searchTerm, lowerCaseTags, pageable);
         Set<UUID> bookmarkedIds = getBookmarkedPromptIds(userDetails);
         return promptPage.map(prompt -> convertToDto(prompt, bookmarkedIds));
     }
 
+    @Transactional
+    public PromptDto updatePromptTags(UUID promptId, Set<String> tagNames, String username) throws AccessDeniedException {
+        Prompt prompt = promptRepository.findById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
+
+        if (!prompt.getAuthor().getUsername().equals(username)) {
+            throw new AccessDeniedException("You do not have permission to edit tags for this prompt.");
+        }
+
+        Set<Tag> managedTags = tagService.findOrCreateTags(tagNames);
+        prompt.setTags(managedTags);
+        Prompt savedPrompt = promptRepository.save(prompt);
+
+        Set<UUID> bookmarkedIds = getBookmarkedPromptIds(
+                (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+        );
+
+        return convertToDto(savedPrompt, bookmarkedIds);
+    }
+
     @Transactional(readOnly = true)
     public Page<PromptDto> getPromptsByAuthorUsername(String username, int page, int size, UserDetails userDetails) {
+        // ... (existing code unchanged)
         userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -73,6 +98,7 @@ public class PromptService {
 
     @Transactional(readOnly = true)
     public PromptDto getPromptById(UUID promptId, UserDetails userDetails) {
+        // ... (existing code unchanged)
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
         Set<UUID> bookmarkedIds = getBookmarkedPromptIds(userDetails);
@@ -81,6 +107,7 @@ public class PromptService {
 
     @Transactional
     public void addBookmark(UUID promptId, String username) {
+        // ... (existing code unchanged)
         User user = userRepository.findByUsernameWithBookmarks(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
         Prompt prompt = promptRepository.findById(promptId)
@@ -90,6 +117,7 @@ public class PromptService {
 
     @Transactional
     public void removeBookmark(UUID promptId, String username) {
+        // ... (existing code unchanged)
         User user = userRepository.findByUsernameWithBookmarks(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
         Prompt prompt = promptRepository.findById(promptId)
@@ -99,13 +127,10 @@ public class PromptService {
 
     @Transactional(readOnly = true)
     public Page<PromptDto> getBookmarkedPrompts(String username, int page, int size) {
+        // ... (existing code unchanged)
         userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
-
-        // --- THE FIX ---
-        // Removed the "p." alias. Sort should use the entity property name directly.
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-
         Page<Prompt> promptPage = promptRepository.findByBookmarkedByUsers_Username(username, pageable);
         Set<UUID> bookmarkedIds = promptPage.getContent().stream().map(Prompt::getId).collect(Collectors.toSet());
         return promptPage.map(prompt -> convertToDto(prompt, bookmarkedIds));
@@ -113,6 +138,7 @@ public class PromptService {
 
     @Transactional
     public PromptDto createPrompt(CreatePromptRequest request, String username) {
+        // ... (existing code unchanged, tags can be added via the new /tags endpoint)
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
         Prompt prompt = new Prompt();
@@ -130,6 +156,7 @@ public class PromptService {
 
     @Transactional
     public PromptDto updatePrompt(UUID promptId, CreatePromptRequest request, String username) throws AccessDeniedException {
+        // ... (existing code unchanged, tags are managed separately)
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
 
@@ -150,6 +177,7 @@ public class PromptService {
 
     @Transactional
     public void deletePrompt(UUID promptId, String username) throws AccessDeniedException {
+        // ... (existing code unchanged)
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
 
@@ -166,6 +194,12 @@ public class PromptService {
         Double averageRating = (reviews != null && !reviews.isEmpty()) ? reviews.stream().mapToInt(Review::getRating).average().orElse(0.0) : 0.0;
         List<ReviewDto> reviewDtos = (reviews != null) ? reviews.stream().map(review -> new ReviewDto(review.getId(), review.getRating(), review.getComment(), review.getUser().getUsername(), (review.getCreatedAt() != null ? review.getCreatedAt().toInstant(ZoneOffset.UTC) : null))).collect(Collectors.toList()) : Collections.emptyList();
 
+        // --- NEW LOGIC TO CONVERT TAGS ---
+        List<String> tagNames = prompt.getTags().stream()
+                .map(Tag::getName)
+                .sorted()
+                .collect(Collectors.toList());
+
         return new PromptDto(
                 prompt.getId(),
                 prompt.getTitle(),
@@ -178,6 +212,7 @@ public class PromptService {
                 updatedAtInstant,
                 averageRating,
                 reviewDtos,
+                tagNames, // --- ADDED TAGS ---
                 bookmarkedPromptIds.contains(prompt.getId())
         );
     }
