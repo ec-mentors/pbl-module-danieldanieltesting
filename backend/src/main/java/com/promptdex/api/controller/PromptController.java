@@ -1,7 +1,9 @@
+// src/main/java/com/promptdex/api/controller/PromptController.java
 package com.promptdex.api.controller;
 
 import com.promptdex.api.dto.CreatePromptRequest;
 import com.promptdex.api.dto.PromptDto;
+import com.promptdex.api.security.UserPrincipal;
 import com.promptdex.api.service.PromptService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -9,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.file.AccessDeniedException;
@@ -27,62 +28,44 @@ public class PromptController {
         this.promptService = promptService;
     }
 
+    // PUBLIC ENDPOINT
     @GetMapping
-    public ResponseEntity<Page<PromptDto>> getAllPrompts(
-            @RequestParam(value = "search", required = false) String search,
-            @RequestParam(value = "tags", required = false) List<String> tags,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "12") int size,
-            @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        Page<PromptDto> promptsPage = promptService.searchAndPagePrompts(search, tags, page, size, userDetails);
-        return ResponseEntity.ok(promptsPage);
+    public Page<PromptDto> searchPrompts(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) List<String> tags,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal UserPrincipal principal) { // Principal can be null for guests
+        return promptService.searchAndPagePrompts(search, tags, page, size, principal);
     }
 
+    // PUBLIC ENDPOINT
     @GetMapping("/{id}")
     public ResponseEntity<PromptDto> getPromptById(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        PromptDto prompt = promptService.getPromptById(id, userDetails);
-        return ResponseEntity.ok(prompt);
+            @AuthenticationPrincipal UserPrincipal principal) { // Principal can be null for guests
+        return ResponseEntity.ok(promptService.getPromptById(id, principal));
     }
 
-    @PostMapping("/{id}/bookmark")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> addBookmark(@PathVariable UUID id, @AuthenticationPrincipal UserDetails userDetails) {
-        promptService.addBookmark(id, userDetails.getUsername());
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    // PUBLIC ENDPOINT to view a user's prompts
+    @GetMapping("/user/{username}")
+    public Page<PromptDto> getPromptsByAuthor(
+            @PathVariable String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal UserPrincipal principal) { // Principal can be null for guests
+        return promptService.getPromptsByAuthorUsername(username, page, size, principal);
     }
 
-    @DeleteMapping("/{id}/bookmark")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> removeBookmark(@PathVariable UUID id, @AuthenticationPrincipal UserDetails userDetails) {
-        promptService.removeBookmark(id, userDetails.getUsername());
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/{id}/tags")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<PromptDto> updatePromptTags(
-            @PathVariable UUID id,
-            @RequestBody Set<String> tagNames,
-            @AuthenticationPrincipal UserDetails userDetails
-    ) throws AccessDeniedException {
-        PromptDto updatedPrompt = promptService.updatePromptTags(id, tagNames, userDetails.getUsername());
-        return ResponseEntity.ok(updatedPrompt);
-    }
-
-    // --- FIX: RESTORED CREATE, UPDATE, AND DELETE ENDPOINTS ---
-
+    // PROTECTED ENDPOINTS
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PromptDto> createPrompt(
             @Valid @RequestBody CreatePromptRequest request,
-            @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        PromptDto newPrompt = promptService.createPrompt(request, userDetails.getUsername());
-        return ResponseEntity.status(HttpStatus.CREATED).body(newPrompt);
+            @AuthenticationPrincipal UserPrincipal principal) {
+        // --- FIX: Pass the entire principal object, not just the username ---
+        PromptDto createdPrompt = promptService.createPrompt(request, principal);
+        return new ResponseEntity<>(createdPrompt, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
@@ -90,9 +73,9 @@ public class PromptController {
     public ResponseEntity<PromptDto> updatePrompt(
             @PathVariable UUID id,
             @Valid @RequestBody CreatePromptRequest request,
-            @AuthenticationPrincipal UserDetails userDetails
-    ) throws AccessDeniedException {
-        PromptDto updatedPrompt = promptService.updatePrompt(id, request, userDetails.getUsername());
+            @AuthenticationPrincipal UserPrincipal principal) throws AccessDeniedException {
+        // --- FIX: Pass the entire principal object, not just the username ---
+        PromptDto updatedPrompt = promptService.updatePrompt(id, request, principal);
         return ResponseEntity.ok(updatedPrompt);
     }
 
@@ -100,9 +83,47 @@ public class PromptController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deletePrompt(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UserDetails userDetails
-    ) throws AccessDeniedException {
-        promptService.deletePrompt(id, userDetails.getUsername());
+            @AuthenticationPrincipal UserPrincipal principal) throws AccessDeniedException {
+        // --- FIX: Pass the entire principal object, not just the username ---
+        promptService.deletePrompt(id, principal);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/tags")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PromptDto> updatePromptTags(
+            @PathVariable("id") UUID promptId,
+            @RequestBody Set<String> tagNames,
+            @AuthenticationPrincipal UserPrincipal principal) throws AccessDeniedException {
+        // --- FIX: Pass the entire principal object, not just the username ---
+        PromptDto updatedPrompt = promptService.updatePromptTags(promptId, tagNames, principal);
+        return ResponseEntity.ok(updatedPrompt);
+    }
+
+    @PostMapping("/{id}/bookmark")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> addBookmark(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        promptService.addBookmark(id, principal.getUsername());
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}/bookmark")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> removeBookmark(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        promptService.removeBookmark(id, principal.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/bookmarks")
+    @PreAuthorize("isAuthenticated()")
+    public Page<PromptDto> getBookmarkedPrompts(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return promptService.getBookmarkedPrompts(principal.getUsername(), page, size);
     }
 }

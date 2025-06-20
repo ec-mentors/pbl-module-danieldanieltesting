@@ -1,7 +1,9 @@
+// src/main/java/com/promptdex/api/service/ReviewService.java
 package com.promptdex.api.service;
 
 import com.promptdex.api.dto.CreateReviewRequest;
 import com.promptdex.api.dto.ReviewDto;
+import com.promptdex.api.dto.UpdateReviewRequest;
 import com.promptdex.api.exception.ResourceNotFoundException;
 import com.promptdex.api.exception.ReviewAlreadyExistsException;
 import com.promptdex.api.model.Prompt;
@@ -10,13 +12,15 @@ import com.promptdex.api.model.User;
 import com.promptdex.api.repository.PromptRepository;
 import com.promptdex.api.repository.ReviewRepository;
 import com.promptdex.api.repository.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.UUID;
 
 @Service
+@Transactional
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
@@ -29,45 +33,71 @@ public class ReviewService {
         this.userRepository = userRepository;
     }
 
-    @Transactional
-    public ReviewDto createReview(CreateReviewRequest createReviewRequest, String username) {
-        // 1. Find the parent entities
-        Prompt prompt = promptRepository.findById(createReviewRequest.promptId())
-                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + createReviewRequest.promptId()));
+    public ReviewDto addReviewToPrompt(UUID promptId, CreateReviewRequest reviewRequest, String username) {
+        if (reviewRepository.existsByPrompt_IdAndUser_Username(promptId, username)) {
+            throw new ReviewAlreadyExistsException("User has already submitted a review for this prompt.");
+        }
+
+        Prompt prompt = promptRepository.findById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
 
-        // 2. Enforce "One Review Per User" constraint BEFORE creating the new review
-        if (reviewRepository.existsByPrompt_IdAndUser_Id(prompt.getId(), user.getId())) {
-            throw new ReviewAlreadyExistsException("User has already submitted a review for this prompt.");
-        }
-
-        // 3. Create the new Review entity
         Review review = new Review();
-        review.setRating(createReviewRequest.rating());
-        review.setComment(createReviewRequest.comment());
-        review.setUser(user);
         review.setPrompt(prompt);
+        review.setUser(user);
+        review.setRating(reviewRequest.rating());
+        review.setComment(reviewRequest.comment());
 
-        // 4. Save the entity.
-        Review savedReview = reviewRepository.save(review);
-
-        // 5. Convert the saved entity to our output DTO
-        return convertToDto(savedReview);
-    }
-
-    private ReviewDto convertToDto(Review review) {
-        Instant createdAtInstant = (review.getCreatedAt() != null)
-                ? review.getCreatedAt().toInstant(ZoneOffset.UTC)
-                : null; // It's safer to return null if the source is null
+        // --- THIS IS THE FIX ---
+        // Use saveAndFlush() to immediately write to the DB and populate the @CreationTimestamp
+        // and @UpdateTimestamp fields on the returned object.
+        Review savedReview = reviewRepository.saveAndFlush(review);
 
         return new ReviewDto(
-                review.getId(),
-                review.getRating(),
-                review.getComment(),
-                review.getUser().getUsername(),
-                createdAtInstant
+                savedReview.getId(),
+                savedReview.getRating(),
+                savedReview.getComment(),
+                savedReview.getUser().getUsername(),
+                savedReview.getCreatedAt().toInstant(ZoneOffset.UTC),
+                savedReview.getUpdatedAt().toInstant(ZoneOffset.UTC)
         );
+    }
+
+    public ReviewDto updateReview(UUID reviewId, UpdateReviewRequest reviewRequest, String username) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found with id: " + reviewId));
+
+        if (!review.getUser().getUsername().equals(username)) {
+            throw new AccessDeniedException("User is not authorized to update this review.");
+        }
+
+        review.setRating(reviewRequest.rating());
+        review.setComment(reviewRequest.comment());
+
+        // Using save() here is fine because the timestamps are already populated.
+        // However, for consistency, saveAndFlush() is also perfectly safe.
+        Review updatedReview = reviewRepository.save(review);
+
+        return new ReviewDto(
+                updatedReview.getId(),
+                updatedReview.getRating(),
+                updatedReview.getComment(),
+                updatedReview.getUser().getUsername(),
+                updatedReview.getCreatedAt().toInstant(ZoneOffset.UTC),
+                updatedReview.getUpdatedAt().toInstant(ZoneOffset.UTC)
+        );
+    }
+
+    public void deleteReview(UUID reviewId, String username) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found with id: " + reviewId));
+
+        if (!review.getUser().getUsername().equals(username)) {
+            throw new AccessDeniedException("User is not authorized to delete this review.");
+        }
+
+        reviewRepository.delete(review);
     }
 }

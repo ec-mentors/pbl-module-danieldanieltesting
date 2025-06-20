@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -15,7 +16,11 @@ import CreatePromptPage from './pages/CreatePromptPage.jsx';
 import EditPromptPage from './pages/EditPromptPage.jsx';
 import UserProfilePage from './pages/UserProfilePage.jsx';
 import BookmarkedPromptsPage from './pages/BookmarkedPromptsPage.jsx';
-import OAuth2RedirectHandler from './pages/OAuth2RedirectHandler.jsx'; // --- IMPORT NEW PAGE ---
+import OAuth2RedirectHandler from './pages/OAuth2RedirectHandler.jsx';
+
+// --- NEW PAGE IMPORTS ---
+import UserCollectionsPage from './pages/UserCollectionsPage.jsx';
+import CollectionDetailPage from './pages/CollectionDetailPage.jsx';
 
 function App() {
   return (
@@ -45,7 +50,6 @@ function App() {
             <Route path="/prompts" element={<PromptsListPage />} />
             <Route path="/prompts/:id" element={<PromptDetailPage />} />
             <Route path="/profile/:username" element={<UserProfilePage />} />
-            {/* --- NEW OAUTH2 REDIRECT ROUTE --- */}
             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
 
             {/* --- Protected Routes --- */}
@@ -53,6 +57,9 @@ function App() {
               <Route path="/create-prompt" element={<CreatePromptPage />} />
               <Route path="/prompts/:id/edit" element={<EditPromptPage />} />
               <Route path="/bookmarks" element={<BookmarkedPromptsPage />} />
+              {/* --- NEW COLLECTION ROUTES --- */}
+              <Route path="/collections" element={<UserCollectionsPage />} />
+              <Route path="/collections/:collectionId" element={<CollectionDetailPage />} />
             </Route>
             
             {/* --- Catch-all 404 Route --- */}

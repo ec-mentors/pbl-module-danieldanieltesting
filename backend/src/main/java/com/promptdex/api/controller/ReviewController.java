@@ -1,18 +1,22 @@
+// src/main/java/com/promptdex/api/controller/ReviewController.java
 package com.promptdex.api.controller;
 
 import com.promptdex.api.dto.CreateReviewRequest;
 import com.promptdex.api.dto.ReviewDto;
+import com.promptdex.api.security.UserPrincipal;
 import com.promptdex.api.service.ReviewService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
-@RequestMapping("/api/reviews")
+@RequestMapping("/api/prompts/{promptId}/reviews") // Endpoint for actions related to a prompt
+@PreAuthorize("isAuthenticated()")
 public class ReviewController {
 
     private final ReviewService reviewService;
@@ -22,15 +26,14 @@ public class ReviewController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReviewDto> createReview(
-            @Valid @RequestBody CreateReviewRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ReviewDto> createReviewForPrompt(
+            @PathVariable UUID promptId,
+            @Valid @RequestBody CreateReviewRequest reviewRequest,
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-        // The controller's job is simple: pass the data to the service
-        ReviewDto createdReview = reviewService.createReview(request, userDetails.getUsername());
+        // This is the corrected call.
+        ReviewDto newReview = reviewService.addReviewToPrompt(promptId, reviewRequest, principal.getUsername());
 
-        // Return the newly created review DTO with a 201 Created status
-        return new ResponseEntity<>(createdReview, HttpStatus.CREATED);
+        return new ResponseEntity<>(newReview, HttpStatus.CREATED);
     }
 }
