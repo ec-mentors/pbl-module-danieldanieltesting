@@ -1,3 +1,4 @@
+// src/main/java/com/promptdex/api/model/User.java
 package com.promptdex.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -17,8 +18,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "users")
-@EqualsAndHashCode(exclude = "bookmarkedPrompts")
-@ToString(exclude = "bookmarkedPrompts")
+@EqualsAndHashCode(exclude = {"bookmarkedPrompts", "collections"}) // <-- UPDATED
+@ToString(exclude = {"bookmarkedPrompts", "collections"}) // <-- UPDATED
 public class User {
 
     @Id
@@ -32,9 +33,6 @@ public class User {
     private String email;
 
     @JsonIgnore
-    // --- THIS IS THE FINAL FIX ---
-    // We explicitly tell JPA that the password column can be null.
-    // This allows OAuth2 users (who have no password) to be saved.
     @Column(nullable = true)
     private String password;
 
@@ -49,4 +47,13 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "prompt_id")
     )
     private Set<Prompt> bookmarkedPrompts = new HashSet<>();
+
+    // --- NEW RELATIONSHIP TO COLLECTIONS ---
+    @OneToMany(
+            mappedBy = "owner",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private Set<Collection> collections = new HashSet<>();
 }

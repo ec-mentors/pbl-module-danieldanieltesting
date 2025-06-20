@@ -1,3 +1,4 @@
+// src/main/java/com/promptdex/api/model/Prompt.java
 package com.promptdex.api.model;
 
 import jakarta.persistence.*;
@@ -21,8 +22,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "prompts")
-@EqualsAndHashCode(exclude = {"bookmarkedByUsers", "tags"}) // Prevent recursion
-@ToString(exclude = {"bookmarkedByUsers", "tags"}) // Prevent recursion
+@EqualsAndHashCode(exclude = {"bookmarkedByUsers", "tags", "collections"}) // <-- UPDATED
+@ToString(exclude = {"bookmarkedByUsers", "tags", "collections"}) // <-- UPDATED
 public class Prompt {
 
     @Id
@@ -67,7 +68,6 @@ public class Prompt {
     @ManyToMany(mappedBy = "bookmarkedPrompts", fetch = FetchType.LAZY)
     private Set<User> bookmarkedByUsers = new HashSet<>();
 
-    // --- NEW TAGS RELATIONSHIP ---
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "prompt_tags",
@@ -75,4 +75,8 @@ public class Prompt {
             inverseJoinColumns = @JoinColumn(name = "tag_id")
     )
     private Set<Tag> tags = new HashSet<>();
+
+    // --- NEW RELATIONSHIP TO COLLECTIONS ---
+    @ManyToMany(mappedBy = "prompts", fetch = FetchType.LAZY)
+    private Set<Collection> collections = new HashSet<>();
 }

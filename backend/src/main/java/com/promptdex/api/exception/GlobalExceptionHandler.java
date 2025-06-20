@@ -1,3 +1,4 @@
+// src/main/java/com/promptdex/api/exception/GlobalExceptionHandler.java
 package com.promptdex.api.exception;
 
 import com.promptdex.api.dto.ErrorResponse;
@@ -6,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.BadCredentialsException; // <-- IMPORT THIS
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,14 +22,19 @@ public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // --- START OF NEW HANDLER ---
+    @ExceptionHandler(CollectionAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleCollectionAlreadyExistsException(CollectionAlreadyExistsException ex, WebRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), Instant.now());
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+    // --- END OF NEW HANDLER ---
+
     // Handler for bad login credentials (wrong username/password)
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentialsException(BadCredentialsException ex, WebRequest request) {
-        // We return a 401 Unauthorized status, which is the correct code for this error.
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "Invalid username or password", Instant.now());
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
-    // --- END OF NEW HANDLER ---
 
     // Handler for our custom "Not Found" exception
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -40,8 +46,6 @@ public class GlobalExceptionHandler {
     // Handler for registration errors (username/email already taken)
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException ex, WebRequest request) {
-        // This is often a 400 Bad Request, but could also be a 409 Conflict depending on the context.
-        // For registration (e.g., "username taken"), 409 might be better. Let's stick to BAD_REQUEST for now.
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), Instant.now());
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
@@ -73,7 +77,6 @@ public class GlobalExceptionHandler {
     // A general fallback handler for any other unexpected exceptions
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, WebRequest request) {
-        // Log the full stack trace for debugging purposes
         logger.error("An unexpected error occurred: ", ex);
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "An internal server error occurred. Please try again later.", Instant.now());
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);

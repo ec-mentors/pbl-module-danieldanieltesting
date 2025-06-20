@@ -1,3 +1,4 @@
+// src/components/Navbar.jsx
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext.jsx';
@@ -38,8 +39,13 @@ const Navbar = () => {
             <div className="hidden md:block">
               <div className="ml-10 flex items-baseline space-x-4">
                 <NavLink to="/prompts">Prompts</NavLink>
-                {/* --- NEW: Bookmarks link for desktop --- */}
-                {isAuthenticated && <NavLink to="/bookmarks">My Bookmarks</NavLink>}
+                {isAuthenticated && (
+                  <>
+                    <NavLink to="/bookmarks">My Bookmarks</NavLink>
+                    {/* --- NEW COLLECTIONS LINK --- */}
+                    <NavLink to="/collections">My Collections</NavLink>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -66,8 +72,13 @@ const Navbar = () => {
         <div className="md:hidden" id="mobile-menu">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             <MobileNavLink to="/prompts" onClick={closeMobileMenu}>Prompts</MobileNavLink>
-            {/* --- NEW: Bookmarks link for mobile --- */}
-            {isAuthenticated && <MobileNavLink to="/bookmarks" onClick={closeMobileMenu}>My Bookmarks</MobileNavLink>}
+            {isAuthenticated && (
+              <>
+                <MobileNavLink to="/bookmarks" onClick={closeMobileMenu}>My Bookmarks</MobileNavLink>
+                {/* --- NEW COLLECTIONS LINK (MOBILE) --- */}
+                <MobileNavLink to="/collections" onClick={closeMobileMenu}>My Collections</MobileNavLink>
+              </>
+            )}
           </div>
           <div className="pt-4 pb-3 border-t border-gray-700">
             {isAuthenticated ? (

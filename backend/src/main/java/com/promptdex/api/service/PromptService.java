@@ -1,11 +1,11 @@
+// src/main/java/com/promptdex/api/service/PromptService.java
 package com.promptdex.api.service;
 
 import com.promptdex.api.dto.CreatePromptRequest;
 import com.promptdex.api.dto.PromptDto;
-import com.promptdex.api.dto.ReviewDto;
 import com.promptdex.api.exception.ResourceNotFoundException;
+import com.promptdex.api.mapper.PromptMapper; // <-- IMPORT THE MAPPER
 import com.promptdex.api.model.Prompt;
-import com.promptdex.api.model.Review;
 import com.promptdex.api.model.Tag;
 import com.promptdex.api.model.User;
 import com.promptdex.api.repository.PromptRepository;
@@ -14,63 +14,112 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.AccessDeniedException;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional // Apply transactionality at the class level
 public class PromptService {
 
     private final PromptRepository promptRepository;
     private final UserRepository userRepository;
-    private final TagService tagService; // --- NEW DEPENDENCY ---
+    private final TagService tagService;
+    private final PromptMapper promptMapper; // <-- NEW DEPENDENCY
 
-    public PromptService(PromptRepository promptRepository, UserRepository userRepository, TagService tagService) {
+    // --- CONSTRUCTOR UPDATED ---
+    public PromptService(PromptRepository promptRepository, UserRepository userRepository, TagService tagService, PromptMapper promptMapper) {
         this.promptRepository = promptRepository;
         this.userRepository = userRepository;
         this.tagService = tagService;
+        this.promptMapper = promptMapper; // <-- INJECT THE MAPPER
     }
 
-    private Set<UUID> getBookmarkedPromptIds(UserDetails userDetails) {
+    private User getOptionalUser(UserDetails userDetails) {
         if (userDetails == null) {
-            return Collections.emptySet();
+            return null;
         }
-        User user = userRepository.findByUsernameWithBookmarks(userDetails.getUsername()).orElse(null);
-        if (user == null) {
-            return Collections.emptySet();
-        }
-        return user.getBookmarkedPrompts().stream()
-                .map(Prompt::getId)
-                .collect(Collectors.toSet());
+        // Use the non-bookmark-fetching method for efficiency unless bookmarks are needed
+        return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
     }
 
     @Transactional(readOnly = true)
     public Page<PromptDto> searchAndPagePrompts(String searchTerm, List<String> tags, int page, int size, UserDetails userDetails) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        // Normalize tags for query
         List<String> lowerCaseTags = (tags != null && !tags.isEmpty()) ? tags.stream().map(String::toLowerCase).collect(Collectors.toList()) : null;
         Page<Prompt> promptPage = promptRepository.searchAndPagePrompts(searchTerm, lowerCaseTags, pageable);
-        Set<UUID> bookmarkedIds = getBookmarkedPromptIds(userDetails);
-        return promptPage.map(prompt -> convertToDto(prompt, bookmarkedIds));
+
+        // --- REFACTORED TO USE MAPPER ---
+        User currentUser = getOptionalUser(userDetails);
+        return promptPage.map(prompt -> promptMapper.toDto(prompt, currentUser));
     }
 
-    @Transactional
-    public PromptDto updatePromptTags(UUID promptId, Set<String> tagNames, String username) throws AccessDeniedException {
+    @Transactional(readOnly = true)
+    public PromptDto getPromptById(UUID promptId, UserDetails userDetails) {
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
 
-        if (!prompt.getAuthor().getUsername().equals(username)) {
+        // --- REFACTORED TO USE MAPPER ---
+        User currentUser = getOptionalUser(userDetails);
+        return promptMapper.toDto(prompt, currentUser);
+    }
+
+    @Transactional
+    public PromptDto createPrompt(CreatePromptRequest request, UserDetails userDetails) {
+        User user = getOptionalUser(userDetails);
+        if (user == null) {
+            throw new ResourceNotFoundException("User not found to create prompt.");
+        }
+
+        Prompt prompt = new Prompt();
+        prompt.setTitle(request.title());
+        prompt.setPromptText(request.text());
+        prompt.setDescription(request.description());
+        prompt.setTargetAiModel(request.model());
+        prompt.setCategory(request.category());
+        prompt.setAuthor(user);
+
+        Prompt savedPrompt = promptRepository.save(prompt);
+
+        // --- REFACTORED TO USE MAPPER ---
+        return promptMapper.toDto(savedPrompt, user);
+    }
+
+    @Transactional
+    public PromptDto updatePrompt(UUID promptId, CreatePromptRequest request, UserDetails userDetails) throws AccessDeniedException {
+        User user = getOptionalUser(userDetails);
+        Prompt prompt = promptRepository.findById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
+
+        if (user == null || !prompt.getAuthor().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You do not have permission to edit this prompt.");
+        }
+
+        prompt.setTitle(request.title());
+        prompt.setPromptText(request.text());
+        prompt.setDescription(request.description());
+        prompt.setTargetAiModel(request.model());
+        prompt.setCategory(request.category());
+
+        Prompt updatedPrompt = promptRepository.save(prompt);
+
+        // --- REFACTORED TO USE MAPPER ---
+        return promptMapper.toDto(updatedPrompt, user);
+    }
+
+    @Transactional
+    public PromptDto updatePromptTags(UUID promptId, Set<String> tagNames, UserDetails userDetails) throws AccessDeniedException {
+        User user = getOptionalUser(userDetails);
+        Prompt prompt = promptRepository.findById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
+
+        if (user == null || !prompt.getAuthor().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not have permission to edit tags for this prompt.");
         }
 
@@ -78,36 +127,26 @@ public class PromptService {
         prompt.setTags(managedTags);
         Prompt savedPrompt = promptRepository.save(prompt);
 
-        Set<UUID> bookmarkedIds = getBookmarkedPromptIds(
-                (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()
-        );
-
-        return convertToDto(savedPrompt, bookmarkedIds);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<PromptDto> getPromptsByAuthorUsername(String username, int page, int size, UserDetails userDetails) {
-        // ... (existing code unchanged)
-        userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Prompt> promptPage = promptRepository.findByAuthor_Username(username, pageable);
-        Set<UUID> bookmarkedIds = getBookmarkedPromptIds(userDetails);
-        return promptPage.map(prompt -> convertToDto(prompt, bookmarkedIds));
-    }
-
-    @Transactional(readOnly = true)
-    public PromptDto getPromptById(UUID promptId, UserDetails userDetails) {
-        // ... (existing code unchanged)
-        Prompt prompt = promptRepository.findById(promptId)
-                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
-        Set<UUID> bookmarkedIds = getBookmarkedPromptIds(userDetails);
-        return convertToDto(prompt, bookmarkedIds);
+        // --- REFACTORED TO USE MAPPER ---
+        return promptMapper.toDto(savedPrompt, user);
     }
 
     @Transactional
+    public void deletePrompt(UUID promptId, UserDetails userDetails) throws AccessDeniedException {
+        User user = getOptionalUser(userDetails);
+        Prompt prompt = promptRepository.findById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
+
+        if (user == null || !prompt.getAuthor().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You do not have permission to delete this prompt.");
+        }
+        promptRepository.delete(prompt);
+    }
+
+    // --- BOOKMARKING AND OTHER METHODS ---
+
+    @Transactional
     public void addBookmark(UUID promptId, String username) {
-        // ... (existing code unchanged)
         User user = userRepository.findByUsernameWithBookmarks(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
         Prompt prompt = promptRepository.findById(promptId)
@@ -117,7 +156,6 @@ public class PromptService {
 
     @Transactional
     public void removeBookmark(UUID promptId, String username) {
-        // ... (existing code unchanged)
         User user = userRepository.findByUsernameWithBookmarks(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
         Prompt prompt = promptRepository.findById(promptId)
@@ -127,93 +165,26 @@ public class PromptService {
 
     @Transactional(readOnly = true)
     public Page<PromptDto> getBookmarkedPrompts(String username, int page, int size) {
-        // ... (existing code unchanged)
-        userRepository.findByUsername(username)
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Prompt> promptPage = promptRepository.findByBookmarkedByUsers_Username(username, pageable);
-        Set<UUID> bookmarkedIds = promptPage.getContent().stream().map(Prompt::getId).collect(Collectors.toSet());
-        return promptPage.map(prompt -> convertToDto(prompt, bookmarkedIds));
+
+        // --- REFACTORED TO USE MAPPER ---
+        return promptPage.map(prompt -> promptMapper.toDto(prompt, user));
     }
 
-    @Transactional
-    public PromptDto createPrompt(CreatePromptRequest request, String username) {
-        // ... (existing code unchanged, tags can be added via the new /tags endpoint)
-        User user = userRepository.findByUsername(username)
+    @Transactional(readOnly = true)
+    public Page<PromptDto> getPromptsByAuthorUsername(String username, int page, int size, UserDetails userDetails) {
+        userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
-        Prompt prompt = new Prompt();
-        prompt.setTitle(request.title());
-        prompt.setPromptText(request.text());
-        prompt.setDescription(request.description());
-        prompt.setTargetAiModel(request.model());
-        prompt.setCategory(request.category());
-        prompt.setAuthor(user);
-        Prompt savedPrompt = promptRepository.saveAndFlush(prompt);
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UserDetails userDetails = (auth != null && auth.getPrincipal() instanceof UserDetails) ? (UserDetails) auth.getPrincipal() : null;
-        return convertToDto(savedPrompt, getBookmarkedPromptIds(userDetails));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Prompt> promptPage = promptRepository.findByAuthor_Username(username, pageable);
+
+        User currentUser = getOptionalUser(userDetails);
+        return promptPage.map(prompt -> promptMapper.toDto(prompt, currentUser));
     }
 
-    @Transactional
-    public PromptDto updatePrompt(UUID promptId, CreatePromptRequest request, String username) throws AccessDeniedException {
-        // ... (existing code unchanged, tags are managed separately)
-        Prompt prompt = promptRepository.findById(promptId)
-                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
-
-        if (!prompt.getAuthor().getUsername().equals(username)) {
-            throw new AccessDeniedException("You do not have permission to edit this prompt.");
-        }
-
-        prompt.setTitle(request.title());
-        prompt.setPromptText(request.text());
-        prompt.setDescription(request.description());
-        prompt.setTargetAiModel(request.model());
-        prompt.setCategory(request.category());
-        Prompt updatedPrompt = promptRepository.save(prompt);
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UserDetails userDetails = (auth != null && auth.getPrincipal() instanceof UserDetails) ? (UserDetails) auth.getPrincipal() : null;
-        return convertToDto(updatedPrompt, getBookmarkedPromptIds(userDetails));
-    }
-
-    @Transactional
-    public void deletePrompt(UUID promptId, String username) throws AccessDeniedException {
-        // ... (existing code unchanged)
-        Prompt prompt = promptRepository.findById(promptId)
-                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
-
-        if (!prompt.getAuthor().getUsername().equals(username)) {
-            throw new AccessDeniedException("You do not have permission to delete this prompt.");
-        }
-        promptRepository.delete(prompt);
-    }
-
-    private PromptDto convertToDto(Prompt prompt, Set<UUID> bookmarkedPromptIds) {
-        Instant createdAtInstant = prompt.getCreatedAt() != null ? prompt.getCreatedAt().toInstant(ZoneOffset.UTC) : null;
-        Instant updatedAtInstant = prompt.getUpdatedAt() != null ? prompt.getUpdatedAt().toInstant(ZoneOffset.UTC) : null;
-        List<Review> reviews = prompt.getReviews();
-        Double averageRating = (reviews != null && !reviews.isEmpty()) ? reviews.stream().mapToInt(Review::getRating).average().orElse(0.0) : 0.0;
-        List<ReviewDto> reviewDtos = (reviews != null) ? reviews.stream().map(review -> new ReviewDto(review.getId(), review.getRating(), review.getComment(), review.getUser().getUsername(), (review.getCreatedAt() != null ? review.getCreatedAt().toInstant(ZoneOffset.UTC) : null))).collect(Collectors.toList()) : Collections.emptyList();
-
-        // --- NEW LOGIC TO CONVERT TAGS ---
-        List<String> tagNames = prompt.getTags().stream()
-                .map(Tag::getName)
-                .sorted()
-                .collect(Collectors.toList());
-
-        return new PromptDto(
-                prompt.getId(),
-                prompt.getTitle(),
-                prompt.getPromptText(),
-                prompt.getDescription(),
-                prompt.getTargetAiModel(),
-                prompt.getCategory(),
-                prompt.getAuthor().getUsername(),
-                createdAtInstant,
-                updatedAtInstant,
-                averageRating,
-                reviewDtos,
-                tagNames, // --- ADDED TAGS ---
-                bookmarkedPromptIds.contains(prompt.getId())
-        );
-    }
+    // --- THE REDUNDANT METHOD HAS BEEN COMPLETELY REMOVED ---
+    // private PromptDto convertToDto(Prompt prompt, Set<UUID> bookmarkedPromptIds) { ... }
 }

@@ -1,13 +1,14 @@
+// src/components/StarRating.jsx
 import React, { useState } from 'react';
 
-const Star = ({ filled, onClick, onMouseEnter, onMouseLeave }) => (
-  // The inline style is the most robust way to guarantee size.
+const Star = ({ filled, onClick, onMouseEnter, onMouseLeave, isEditable }) => (
   <div
     onClick={onClick}
     onMouseEnter={onMouseEnter}
     onMouseLeave={onMouseLeave}
     style={{ width: '1.25rem', height: '1.25rem' }} // Fixed size of 20px.
-    className="cursor-pointer flex-shrink-0" // flex-shrink-0 prevents it from being squashed.
+    // --- FIX: Make cursor a pointer only when editable ---
+    className={isEditable ? 'cursor-pointer flex-shrink-0' : 'flex-shrink-0'}
   >
     <svg
       className={`w-full h-full ${filled ? 'text-yellow-400' : 'text-gray-300'}`}
@@ -20,23 +21,27 @@ const Star = ({ filled, onClick, onMouseEnter, onMouseLeave }) => (
   </div>
 );
 
-const StarRating = ({ rating, onRatingChange }) => {
+// --- FIX: Add `isEditable` prop, defaulting to true ---
+const StarRating = ({ rating, onRatingChange, isEditable = true }) => {
   const [hoverRating, setHoverRating] = useState(0);
 
   const handleClick = (index) => {
-    if (onRatingChange) {
+    // Only allow changes if editable
+    if (isEditable && onRatingChange) {
       onRatingChange(index);
     }
   };
 
   const handleMouseEnter = (index) => {
-    if (onRatingChange) {
+    // Only allow hover effects if editable
+    if (isEditable) {
       setHoverRating(index);
     }
   };
 
   const handleMouseLeave = () => {
-    if (onRatingChange) {
+    // Only allow hover effects if editable
+    if (isEditable) {
       setHoverRating(0);
     }
   };
@@ -46,10 +51,12 @@ const StarRating = ({ rating, onRatingChange }) => {
       {[1, 2, 3, 4, 5].map((index) => (
         <Star
           key={index}
-          filled={(hoverRating || rating) >= index}
+          // --- FIX: When not editable, hoverRating is ignored ---
+          filled={(isEditable ? (hoverRating || rating) : rating) >= index}
           onClick={() => handleClick(index)}
           onMouseEnter={() => handleMouseEnter(index)}
           onMouseLeave={handleMouseLeave}
+          isEditable={isEditable}
         />
       ))}
     </div>
