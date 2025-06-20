@@ -2,28 +2,43 @@ package com.promptdex.api.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.ToString;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
-@Data // Lombok: Generates getters, setters, equals, hashCode, and toString methods.
-@NoArgsConstructor // Lombok: Generates a no-argument constructor.
-@AllArgsConstructor // Lombok: Generates a constructor with all arguments.
-@Entity // JPA: Marks this class as a database entity that can be persisted.
-@Table(name = "users") // Specifies the exact table name in the database.
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "users")
+@EqualsAndHashCode(exclude = "bookmarkedPrompts") // Prevent recursion in equals/hashCode
+@ToString(exclude = "bookmarkedPrompts") // Prevent recursion in toString
 public class User {
 
-    @Id // Marks this field as the primary key for the table.
-    @GeneratedValue(strategy = GenerationType.UUID) // Configures the primary key to be a unique, auto-generated UUID.
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true) // Column cannot be empty and must have a unique value.
+    @Column(nullable = false, unique = true)
     private String username;
 
     @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
-    private String password; // This will store the securely hashed password.
+    private String password;
+
+    // --- NEW RELATIONSHIP ---
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "user_bookmarks",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "prompt_id")
+    )
+    private Set<Prompt> bookmarkedPrompts = new HashSet<>();
 }

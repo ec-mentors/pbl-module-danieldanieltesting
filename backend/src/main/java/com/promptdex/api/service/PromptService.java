@@ -13,6 +13,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +25,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -36,38 +40,81 @@ public class PromptService {
         this.userRepository = userRepository;
     }
 
-    // ... existing methods (searchAndPagePrompts, getPromptById, etc.) ...
-
-    @Transactional(readOnly = true)
-    public Page<PromptDto> searchAndPagePrompts(String searchTerm, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Prompt> promptPage = promptRepository.searchAndPagePrompts(searchTerm, pageable);
-        return promptPage.map(this::convertToDto);
+    private Set<UUID> getBookmarkedPromptIds(UserDetails userDetails) {
+        if (userDetails == null) {
+            return Collections.emptySet();
+        }
+        User user = userRepository.findByUsernameWithBookmarks(userDetails.getUsername()).orElse(null);
+        if (user == null) {
+            return Collections.emptySet();
+        }
+        return user.getBookmarkedPrompts().stream()
+                .map(Prompt::getId)
+                .collect(Collectors.toSet());
     }
 
     @Transactional(readOnly = true)
-    public Page<PromptDto> getPromptsByAuthorUsername(String username, int page, int size) {
-        // First, check if the user exists to provide a clear 404 error if not.
+    public Page<PromptDto> searchAndPagePrompts(String searchTerm, int page, int size, UserDetails userDetails) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Prompt> promptPage = promptRepository.searchAndPagePrompts(searchTerm, pageable);
+        Set<UUID> bookmarkedIds = getBookmarkedPromptIds(userDetails);
+        return promptPage.map(prompt -> convertToDto(prompt, bookmarkedIds));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PromptDto> getPromptsByAuthorUsername(String username, int page, int size, UserDetails userDetails) {
+        userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Prompt> promptPage = promptRepository.findByAuthor_Username(username, pageable);
+        Set<UUID> bookmarkedIds = getBookmarkedPromptIds(userDetails);
+        return promptPage.map(prompt -> convertToDto(prompt, bookmarkedIds));
+    }
+
+    @Transactional(readOnly = true)
+    public PromptDto getPromptById(UUID promptId, UserDetails userDetails) {
+        Prompt prompt = promptRepository.findById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
+        Set<UUID> bookmarkedIds = getBookmarkedPromptIds(userDetails);
+        return convertToDto(prompt, bookmarkedIds);
+    }
+
+    @Transactional
+    public void addBookmark(UUID promptId, String username) {
+        User user = userRepository.findByUsernameWithBookmarks(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+        Prompt prompt = promptRepository.findById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
+        user.getBookmarkedPrompts().add(prompt);
+    }
+
+    @Transactional
+    public void removeBookmark(UUID promptId, String username) {
+        User user = userRepository.findByUsernameWithBookmarks(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+        Prompt prompt = promptRepository.findById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
+        user.getBookmarkedPrompts().remove(prompt);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PromptDto> getBookmarkedPrompts(String username, int page, int size) {
         userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
 
+        // --- THE FIX ---
+        // Removed the "p." alias. Sort should use the entity property name directly.
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Prompt> promptPage = promptRepository.findByAuthor_Username(username, pageable);
-        return promptPage.map(this::convertToDto);
-    }
 
-    @Transactional(readOnly = true)
-    public PromptDto getPromptById(UUID promptId) {
-        Prompt prompt = promptRepository.findById(promptId)
-                .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
-        return convertToDto(prompt);
+        Page<Prompt> promptPage = promptRepository.findByBookmarkedByUsers_Username(username, pageable);
+        Set<UUID> bookmarkedIds = promptPage.getContent().stream().map(Prompt::getId).collect(Collectors.toSet());
+        return promptPage.map(prompt -> convertToDto(prompt, bookmarkedIds));
     }
 
     @Transactional
     public PromptDto createPrompt(CreatePromptRequest request, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
-
         Prompt prompt = new Prompt();
         prompt.setTitle(request.title());
         prompt.setPromptText(request.text());
@@ -75,10 +122,10 @@ public class PromptService {
         prompt.setTargetAiModel(request.model());
         prompt.setCategory(request.category());
         prompt.setAuthor(user);
-
         Prompt savedPrompt = promptRepository.saveAndFlush(prompt);
-
-        return convertToDto(savedPrompt);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (auth != null && auth.getPrincipal() instanceof UserDetails) ? (UserDetails) auth.getPrincipal() : null;
+        return convertToDto(savedPrompt, getBookmarkedPromptIds(userDetails));
     }
 
     @Transactional
@@ -95,9 +142,10 @@ public class PromptService {
         prompt.setDescription(request.description());
         prompt.setTargetAiModel(request.model());
         prompt.setCategory(request.category());
-
         Prompt updatedPrompt = promptRepository.save(prompt);
-        return convertToDto(updatedPrompt);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (auth != null && auth.getPrincipal() instanceof UserDetails) ? (UserDetails) auth.getPrincipal() : null;
+        return convertToDto(updatedPrompt, getBookmarkedPromptIds(userDetails));
     }
 
     @Transactional
@@ -108,42 +156,15 @@ public class PromptService {
         if (!prompt.getAuthor().getUsername().equals(username)) {
             throw new AccessDeniedException("You do not have permission to delete this prompt.");
         }
-
         promptRepository.delete(prompt);
     }
 
-    private PromptDto convertToDto(Prompt prompt) {
-        LocalDateTime createdAt = prompt.getCreatedAt();
-        LocalDateTime updatedAt = prompt.getUpdatedAt();
-
-        Instant createdAtInstant = (createdAt != null) ? createdAt.toInstant(ZoneOffset.UTC) : null;
-        Instant updatedAtInstant = (updatedAt != null) ? updatedAt.toInstant(ZoneOffset.UTC) : null;
-
+    private PromptDto convertToDto(Prompt prompt, Set<UUID> bookmarkedPromptIds) {
+        Instant createdAtInstant = prompt.getCreatedAt() != null ? prompt.getCreatedAt().toInstant(ZoneOffset.UTC) : null;
+        Instant updatedAtInstant = prompt.getUpdatedAt() != null ? prompt.getUpdatedAt().toInstant(ZoneOffset.UTC) : null;
         List<Review> reviews = prompt.getReviews();
-
-        Double averageRating = (reviews != null && !reviews.isEmpty())
-                ? reviews.stream()
-                .mapToInt(Review::getRating)
-                .average()
-                .orElse(0.0)
-                : 0.0;
-
-        List<ReviewDto> reviewDtos = (reviews != null)
-                ? reviews.stream()
-                .map(review -> {
-                    LocalDateTime reviewCreatedAt = review.getCreatedAt();
-                    Instant reviewCreatedAtInstant = (reviewCreatedAt != null) ? reviewCreatedAt.toInstant(ZoneOffset.UTC) : null;
-
-                    return new ReviewDto(
-                            review.getId(),
-                            review.getRating(),
-                            review.getComment(),
-                            review.getUser().getUsername(),
-                            reviewCreatedAtInstant
-                    );
-                })
-                .collect(Collectors.toList())
-                : Collections.emptyList();
+        Double averageRating = (reviews != null && !reviews.isEmpty()) ? reviews.stream().mapToInt(Review::getRating).average().orElse(0.0) : 0.0;
+        List<ReviewDto> reviewDtos = (reviews != null) ? reviews.stream().map(review -> new ReviewDto(review.getId(), review.getRating(), review.getComment(), review.getUser().getUsername(), (review.getCreatedAt() != null ? review.getCreatedAt().toInstant(ZoneOffset.UTC) : null))).collect(Collectors.toList()) : Collections.emptyList();
 
         return new PromptDto(
                 prompt.getId(),
@@ -156,7 +177,8 @@ public class PromptService {
                 createdAtInstant,
                 updatedAtInstant,
                 averageRating,
-                reviewDtos
+                reviewDtos,
+                bookmarkedPromptIds.contains(prompt.getId())
         );
     }
 }
