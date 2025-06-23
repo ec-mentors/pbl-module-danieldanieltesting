@@ -1,4 +1,3 @@
-// src/main/java/com/promptdex/api/config/WebConfig.java
 package com.promptdex.api.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,33 +13,39 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.List;
 
 @Configuration
-@EnableWebMvc
+@EnableWebMvc // Important for WebMvcConfigurer to be picked up
 public class WebConfig implements WebMvcConfigurer {
 
-    // --- THIS IS THE EXISTING, CORRECT CORS CONFIGURATION ---
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**") // Apply this rule to all API paths
-                .allowedOrigins("http://localhost:5173") // Allow requests from your Vite frontend
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Explicitly allow methods
-                .allowedHeaders("*") // Allow all headers
-                .allowCredentials(true) // Allow credentials (e.g., cookies, auth headers)
-                .maxAge(3600); // Cache the preflight response for 1 hour
+        registry.addMapping("/api/**") // Apply this rule specifically to API paths
+                // --- MODIFIED ---
+                // Allow multiple origins for local development (main frontend + admin frontend)
+                .allowedOrigins(
+                        "http://localhost:5173", // Standard Vite port for main frontend
+                        "http://localhost:5174", // Possible Vite port for admin frontend
+                        "http://localhost:5175"  // Another possible Vite port
+                        // Add your production frontend URLs here when you deploy
+                        // e.g., "https://www.promptdex.com", "https://admin.promptdex.com"
+                )
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS") // Explicitly list allowed methods
+                .allowedHeaders("*") // Allow all headers for simplicity here, SecurityConfig can be more specific
+                .allowCredentials(true) // Allow sending credentials (cookies, auth headers)
+                .maxAge(3600); // Cache preflight (OPTIONS) request for 1 hour
     }
 
-    // --- THIS IS THE NEW, DEFINITIVE FIX FOR JSON DATE FORMATTING ---
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        // 1. Create our custom ObjectMapper
+        // 1. Create our custom ObjectMapper for consistent date handling
         ObjectMapper objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule()) // Teaches Jackson about Java 8 dates
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // Enforces ISO-8601 strings
+                .registerModule(new JavaTimeModule()) // Teaches Jackson about Java 8 date/time types
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // Ensures dates are ISO-8601 strings
 
         // 2. Create a new message converter that uses our custom ObjectMapper
-        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(objectMapper);
+        MappingJackson2HttpMessageConverter customJsonConverter = new MappingJackson2HttpMessageConverter(objectMapper);
 
-        // 3. Add our custom converter to the list of converters Spring will use.
-        //    By adding it first, we ensure it's used for all JSON operations.
-        converters.add(0, converter);
+        // 3. Add our custom converter to the beginning of Spring's list of converters.
+        //    This ensures it's used for all JSON serialization/deserialization.
+        converters.add(0, customJsonConverter);
     }
 }

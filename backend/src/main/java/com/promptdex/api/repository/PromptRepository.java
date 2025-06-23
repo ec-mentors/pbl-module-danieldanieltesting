@@ -6,17 +6,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+@Repository
 public interface PromptRepository extends JpaRepository<Prompt, UUID> {
 
-    /**
-     * Searches for prompts with pagination and filtering by search term and tags.
-     * This query is optimized to prevent the N+1 problem by fetching the author
-     * and tags relationships in the same query as the prompts.
-     */
     @Query(value = "SELECT DISTINCT p FROM Prompt p " +
             "LEFT JOIN FETCH p.author " +
             "LEFT JOIN FETCH p.tags t WHERE " +
@@ -37,18 +35,48 @@ public interface PromptRepository extends JpaRepository<Prompt, UUID> {
             Pageable pageable
     );
 
-    Page<Prompt> findByAuthor_Username(String username, Pageable pageable);
+    @Query("SELECT p FROM Prompt p LEFT JOIN FETCH p.author WHERE p.author.username = :username")
+    Page<Prompt> findByAuthor_Username(@Param("username") String username, Pageable pageable);
 
-    Page<Prompt> findByBookmarkedByUsers_Username(String username, Pageable pageable);
+    @Query("SELECT p FROM Prompt p LEFT JOIN FETCH p.author JOIN p.bookmarkedByUsers u WHERE u.username = :username")
+    Page<Prompt> findByBookmarkedByUsers_Username(@Param("username") String username, Pageable pageable);
 
-    // --- NEW METHOD FOR THE ACTIVITY FEED ---
-    /**
-     * Finds prompts created by a specific set of users (authors), ordered by creation date descending.
-     * This is the core query for the "prompts from people you follow" activity feed.
-     *
-     * @param authorIds The list of User IDs to fetch prompts from.
-     * @param pageable  The pagination information.
-     * @return A page of prompts from the specified authors.
-     */
-    Page<Prompt> findByAuthor_IdInOrderByCreatedAtDesc(List<UUID> authorIds, Pageable pageable);
+
+    @Query("SELECT p FROM Prompt p LEFT JOIN FETCH p.author WHERE p.author.id IN :authorIds ORDER BY p.createdAt DESC")
+    Page<Prompt> findByAuthor_IdInOrderByCreatedAtDesc(@Param("authorIds") List<UUID> authorIds, Pageable pageable);
+
+
+    @Query("SELECT p FROM Prompt p LEFT JOIN FETCH p.author LEFT JOIN FETCH p.tags WHERE p.id = :promptId")
+    Optional<Prompt> findByIdWithAuthorAndTags(@Param("promptId") UUID promptId);
+
+
+    @Query(value = "SELECT DISTINCT p FROM Prompt p LEFT JOIN FETCH p.author LEFT JOIN FETCH p.tags",
+            countQuery = "SELECT COUNT(DISTINCT p) FROM Prompt p")
+    Page<Prompt> findAllWithAuthorAndTags(Pageable pageable);
+
+    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.prompt.id = :promptId")
+    Optional<Double> findAverageRatingByPromptId(@Param("promptId") UUID promptId);
+
+    // --- NEW METHOD FOR ADMIN PROMPT SEARCH ---
+    @Query(value = "SELECT DISTINCT p FROM Prompt p " +
+            "LEFT JOIN FETCH p.author a " +
+            "LEFT JOIN FETCH p.tags t " +
+            "WHERE (:searchTerm IS NULL OR :searchTerm = '' OR " +
+            "LOWER(p.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(p.promptText) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(p.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(p.category) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(a.username) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(t.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))",
+            countQuery = "SELECT COUNT(DISTINCT p) FROM Prompt p " +
+                    "LEFT JOIN p.author a " +
+                    "LEFT JOIN p.tags t " +
+                    "WHERE (:searchTerm IS NULL OR :searchTerm = '' OR " +
+                    "LOWER(p.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+                    "LOWER(p.promptText) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+                    "LOWER(p.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+                    "LOWER(p.category) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+                    "LOWER(a.username) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+                    "LOWER(t.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<Prompt> findAllAdminSearch(@Param("searchTerm") String searchTerm, Pageable pageable);
 }

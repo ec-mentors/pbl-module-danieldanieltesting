@@ -12,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set; // <<< --- ADDED IMPORT
+
 @Service
 public class AuthService {
 
@@ -28,18 +30,24 @@ public class AuthService {
     @Transactional
     public User registerUser(RegisterRequest registerRequest) {
         if (userRepository.existsByUsername(registerRequest.getUsername())) {
-            throw new IllegalArgumentException("Error: Username is already taken!");
+            // Consider using a custom exception that GlobalExceptionHandler can turn into a 409 or 400
+            throw new IllegalStateException("Error: Username is already taken!");
         }
 
         if (userRepository.existsByEmail(registerRequest.getEmail())) {
-            throw new IllegalArgumentException("Error: Email is already in use!");
+            // Consider using a custom exception
+            throw new IllegalStateException("Error: Email is already in use!");
         }
 
         User newUser = new User();
         newUser.setUsername(registerRequest.getUsername());
         newUser.setEmail(registerRequest.getEmail());
         newUser.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-        newUser.setProvider(AuthProvider.LOCAL); // Set provider to LOCAL for standard registration
+        newUser.setProvider(AuthProvider.LOCAL);
+
+        // --- MODIFICATION: Assign default role ---
+        newUser.setRoles(Set.of("ROLE_USER"));
+        // --- END MODIFICATION ---
 
         return userRepository.save(newUser);
     }
