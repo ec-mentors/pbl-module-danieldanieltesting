@@ -79,43 +79,49 @@ Welcome to PromptDex, your ultimate hub for discovering, creating, and sharing A
 
 ## 📚 Project Structure (Simplified)
 
-
-
-promptdex/
-├── promptdex-api/ # Backend Spring Boot application
-│ ├── src/main/java/com/promptdex/api/
-│ │ ├── config/ # Security, CORS, etc.
-│ │ ├── controller/ # REST API controllers (user & admin)
-│ │ ├── dto/ # Data Transfer Objects
-│ │ ├── exception/ # Custom exceptions & handlers
-│ │ ├── mapper/ # Entity-DTO mappers
-│ │ ├── model/ # JPA Entities
-│ │ ├── repository/ # Spring Data JPA repositories
-│ │ ├── security/ # JWT providers, UserDetails services
-│ │ └── service/ # Business logic
-│ └── pom.xml
+```promptdex/
+├── promptdex-api/                  # Backend Spring Boot application
+│   ├── src/
+│   │   └── main/
+│   │       ├── java/
+│   │       │   └── com/promptdex/api/
+│   │       │       ├── config/         # Security, CORS, etc.
+│   │       │       ├── controller/     # REST API controllers (user & admin)
+│   │       │       ├── dto/            # Data Transfer Objects
+│   │       │       ├── exception/      # Custom exceptions & handlers
+│   │       │       ├── mapper/         # Entity-DTO mappers
+│   │       │       ├── model/          # JPA Entities
+│   │       │       ├── repository/     # Spring Data JPA repositories
+│   │       │       ├── security/       # JWT providers, UserDetails services
+│   │       │       └── service/        # Business logic
+│   │       └── resources/              # application.properties, static assets for backend
+│   └── pom.xml                       # Maven project file
 │
-├── promptdex-frontend/ # Main User-Facing Frontend (Conceptual)
-│ ├── public/
-│ ├── src/
-│ │ ├── assets/
-│ │ ├── components/
-│ │ ├── pages/
-│ │ ├── services/
-│ │ ├── stores/
-│ │ └── App.tsx
-│ └── package.json
+├── promptdex-frontend/             # Main User-Facing Frontend (Conceptual)
+│   ├── public/                       # Static assets
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── stores/
+│   │   └── App.tsx                   # Main application component
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.ts
 │
-└── promptdex-admin-frontend/ # Admin Panel Frontend
-├── public/
-├── src/
-│ ├── components/
-│ ├── layouts/ # AdminLayout
-│ ├── pages/ # LoginPage, DashboardPage, UserManagementPage, etc.
-│ ├── services/ # apiClient.ts
-│ ├── stores/ # authStore.ts
-│ └── App.tsx
-└── package.json
+└── promptdex-admin-frontend/       # Admin Panel Frontend
+    ├── public/                       # Static assets
+    ├── src/
+    │   ├── components/
+    │   ├── layouts/                  # AdminLayout.tsx
+    │   ├── pages/                    # LoginPage, DashboardPage, UserManagementPage, etc.
+    │   ├── services/                 # apiClient.ts
+    │   ├── stores/                   # authStore.ts
+    │   └── App.tsx                   # Main admin application component
+    ├── index.html
+    ├── package.json
+    └── vite.config.ts
 
 
 
@@ -241,6 +247,11 @@ Contributions are welcome! If you'd like to contribute, please follow these step
 
 Please ensure your code adheres to the project's coding standards and includes tests where applicable.
 
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details (you'll need to create this file with MIT license text).
 
 ---
 
