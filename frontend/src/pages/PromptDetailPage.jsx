@@ -169,4 +169,4 @@ const PromptDetailPage = () => {
   );
 };
 
-export default PromptDetailPage;
+export default PromptDetailPage;  

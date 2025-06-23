@@ -1,3 +1,5 @@
+// COMPLETE FILE: src/main/java/com/promptdex/api/model/User.java
+
 package com.promptdex.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -5,7 +7,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import lombok.ToString;
 
 import java.util.HashSet;
@@ -14,7 +15,6 @@ import java.util.UUID;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "users")
 @EqualsAndHashCode(exclude = {"bookmarkedPrompts", "collections", "following", "followers"})
@@ -55,7 +55,7 @@ public class User {
     )
     private Set<Collection> collections = new HashSet<>();
 
-    // --- NEW RELATIONSHIPS FOR FOLLOWING ---
+    // The "Owning" side of the relationship
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_follows",
@@ -64,6 +64,20 @@ public class User {
     )
     private Set<User> following = new HashSet<>();
 
+    // The "Inverse" (non-owning) side
     @ManyToMany(mappedBy = "following", fetch = FetchType.LAZY)
     private Set<User> followers = new HashSet<>();
+
+
+    // --- NEW HELPER METHODS FOR THE FIX ---
+
+    public void follow(User userToFollow) {
+        this.following.add(userToFollow);
+        userToFollow.getFollowers().add(this); // Manually synchronize the inverse side
+    }
+
+    public void unfollow(User userToUnfollow) {
+        this.following.remove(userToUnfollow);
+        userToUnfollow.getFollowers().remove(this); // Manually synchronize the inverse side
+    }
 }

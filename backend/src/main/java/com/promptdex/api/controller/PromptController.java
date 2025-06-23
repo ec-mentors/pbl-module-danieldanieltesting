@@ -1,4 +1,5 @@
-// src/main/java/com/promptdex/api/controller/PromptController.java
+// COMPLETE FILE: src/main/java/com/promptdex/api/controller/PromptController.java
+
 package com.promptdex.api.controller;
 
 import com.promptdex.api.dto.CreatePromptRequest;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails; // Import UserDetails
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.file.AccessDeniedException;
@@ -35,7 +37,7 @@ public class PromptController {
             @RequestParam(required = false) List<String> tags,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @AuthenticationPrincipal UserPrincipal principal) { // Principal can be null for guests
+            @AuthenticationPrincipal UserDetails principal) { // CHANGE: UserPrincipal -> UserDetails
         return promptService.searchAndPagePrompts(search, tags, page, size, principal);
     }
 
@@ -43,7 +45,7 @@ public class PromptController {
     @GetMapping("/{id}")
     public ResponseEntity<PromptDto> getPromptById(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UserPrincipal principal) { // Principal can be null for guests
+            @AuthenticationPrincipal UserDetails principal) { // CHANGE: UserPrincipal -> UserDetails
         return ResponseEntity.ok(promptService.getPromptById(id, principal));
     }
 
@@ -53,7 +55,7 @@ public class PromptController {
             @PathVariable String username,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @AuthenticationPrincipal UserPrincipal principal) { // Principal can be null for guests
+            @AuthenticationPrincipal UserDetails principal) { // CHANGE: UserPrincipal -> UserDetails
         return promptService.getPromptsByAuthorUsername(username, page, size, principal);
     }
 
@@ -62,8 +64,7 @@ public class PromptController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PromptDto> createPrompt(
             @Valid @RequestBody CreatePromptRequest request,
-            @AuthenticationPrincipal UserPrincipal principal) {
-        // --- FIX: Pass the entire principal object, not just the username ---
+            @AuthenticationPrincipal UserDetails principal) { // CHANGE: UserPrincipal -> UserDetails
         PromptDto createdPrompt = promptService.createPrompt(request, principal);
         return new ResponseEntity<>(createdPrompt, HttpStatus.CREATED);
     }
@@ -73,8 +74,7 @@ public class PromptController {
     public ResponseEntity<PromptDto> updatePrompt(
             @PathVariable UUID id,
             @Valid @RequestBody CreatePromptRequest request,
-            @AuthenticationPrincipal UserPrincipal principal) throws AccessDeniedException {
-        // --- FIX: Pass the entire principal object, not just the username ---
+            @AuthenticationPrincipal UserDetails principal) throws AccessDeniedException { // CHANGE: UserPrincipal -> UserDetails
         PromptDto updatedPrompt = promptService.updatePrompt(id, request, principal);
         return ResponseEntity.ok(updatedPrompt);
     }
@@ -83,8 +83,7 @@ public class PromptController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deletePrompt(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UserPrincipal principal) throws AccessDeniedException {
-        // --- FIX: Pass the entire principal object, not just the username ---
+            @AuthenticationPrincipal UserDetails principal) throws AccessDeniedException { // CHANGE: UserPrincipal -> UserDetails
         promptService.deletePrompt(id, principal);
         return ResponseEntity.noContent().build();
     }
@@ -94,8 +93,7 @@ public class PromptController {
     public ResponseEntity<PromptDto> updatePromptTags(
             @PathVariable("id") UUID promptId,
             @RequestBody Set<String> tagNames,
-            @AuthenticationPrincipal UserPrincipal principal) throws AccessDeniedException {
-        // --- FIX: Pass the entire principal object, not just the username ---
+            @AuthenticationPrincipal UserDetails principal) throws AccessDeniedException { // CHANGE: UserPrincipal -> UserDetails
         PromptDto updatedPrompt = promptService.updatePromptTags(promptId, tagNames, principal);
         return ResponseEntity.ok(updatedPrompt);
     }
@@ -104,7 +102,7 @@ public class PromptController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> addBookmark(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @AuthenticationPrincipal UserDetails principal) { // CHANGE: UserPrincipal -> UserDetails
         promptService.addBookmark(id, principal.getUsername());
         return ResponseEntity.ok().build();
     }
@@ -113,7 +111,7 @@ public class PromptController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> removeBookmark(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @AuthenticationPrincipal UserDetails principal) { // CHANGE: UserPrincipal -> UserDetails
         promptService.removeBookmark(id, principal.getUsername());
         return ResponseEntity.noContent().build();
     }
@@ -121,7 +119,7 @@ public class PromptController {
     @GetMapping("/bookmarks")
     @PreAuthorize("isAuthenticated()")
     public Page<PromptDto> getBookmarkedPrompts(
-            @AuthenticationPrincipal UserPrincipal principal,
+            @AuthenticationPrincipal UserDetails principal, // CHANGE: UserPrincipal -> UserDetails
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return promptService.getBookmarkedPrompts(principal.getUsername(), page, size);

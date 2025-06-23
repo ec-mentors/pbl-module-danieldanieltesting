@@ -1,15 +1,16 @@
+// COMPLETE AND CORRECTED FILE: src/main/java/com/promptdex/api/controller/UserController.java
+
 package com.promptdex.api.controller;
 
 import com.promptdex.api.dto.ProfileDto;
 import com.promptdex.api.dto.PromptDto;
-import com.promptdex.api.security.UserPrincipal;
 import com.promptdex.api.service.PromptService;
 import com.promptdex.api.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetails; // Using the standard interface
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,31 +25,28 @@ public class UserController {
         this.userService = userService;
     }
 
-    // --- NEW ENDPOINT ---
     @GetMapping("/{username}/profile")
     public ResponseEntity<ProfileDto> getUserProfile(
             @PathVariable String username,
-            @AuthenticationPrincipal UserPrincipal principal) { // Can be null for guests
+            @AuthenticationPrincipal UserDetails principal) { // <-- FIX: Changed from UserPrincipal to UserDetails
         ProfileDto profile = userService.getProfile(username, principal);
         return ResponseEntity.ok(profile);
     }
 
-    // --- NEW ENDPOINT ---
     @PostMapping("/{username}/follow")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProfileDto> followUser(
             @PathVariable String username,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @AuthenticationPrincipal UserDetails principal) { // <-- FIX: Changed from UserPrincipal to UserDetails
         ProfileDto profile = userService.followUser(username, principal);
         return ResponseEntity.ok(profile);
     }
 
-    // --- NEW ENDPOINT ---
     @PostMapping("/{username}/unfollow")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProfileDto> unfollowUser(
             @PathVariable String username,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @AuthenticationPrincipal UserDetails principal) { // <-- FIX: Changed from UserPrincipal to UserDetails
         ProfileDto profile = userService.unfollowUser(username, principal);
         return ResponseEntity.ok(profile);
     }

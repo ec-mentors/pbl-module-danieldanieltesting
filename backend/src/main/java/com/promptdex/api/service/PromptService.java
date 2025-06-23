@@ -1,3 +1,6 @@
+// COMPLETE FILE: src/main/java/com/promptdex/api/service/PromptService.java
+// This file is already correct and requires no changes.
+
 package com.promptdex.api.service;
 
 import com.promptdex.api.dto.CreatePromptRequest;
@@ -46,6 +49,15 @@ public class PromptService {
         return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
     }
 
+    private User getUserFromDetails(UserDetails userDetails) {
+        if (userDetails == null) {
+            // Throwing here makes it explicit that a user is required for this operation
+            throw new AccessDeniedException("Authentication is required to perform this action.");
+        }
+        return userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User " + userDetails.getUsername() + " not found in database."));
+    }
+
     @Transactional(readOnly = true)
     public Page<PromptDto> searchAndPagePrompts(String searchTerm, List<String> tags, int page, int size, UserDetails userDetails) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -66,10 +78,7 @@ public class PromptService {
 
     @Transactional
     public PromptDto createPrompt(CreatePromptRequest request, UserDetails userDetails) {
-        User user = getOptionalUser(userDetails);
-        if (user == null) {
-            throw new ResourceNotFoundException("User not found to create prompt.");
-        }
+        User user = getUserFromDetails(userDetails);
 
         Prompt prompt = new Prompt();
         prompt.setTitle(request.title());
@@ -86,11 +95,11 @@ public class PromptService {
 
     @Transactional
     public PromptDto updatePrompt(UUID promptId, CreatePromptRequest request, UserDetails userDetails) throws AccessDeniedException {
-        User user = getOptionalUser(userDetails);
+        User user = getUserFromDetails(userDetails);
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
 
-        if (user == null || !prompt.getAuthor().getId().equals(user.getId())) {
+        if (!prompt.getAuthor().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not have permission to edit this prompt.");
         }
 
@@ -107,11 +116,11 @@ public class PromptService {
 
     @Transactional
     public PromptDto updatePromptTags(UUID promptId, Set<String> tagNames, UserDetails userDetails) throws AccessDeniedException {
-        User user = getOptionalUser(userDetails);
+        User user = getUserFromDetails(userDetails);
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
 
-        if (user == null || !prompt.getAuthor().getId().equals(user.getId())) {
+        if (!prompt.getAuthor().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not have permission to edit tags for this prompt.");
         }
 
@@ -124,11 +133,11 @@ public class PromptService {
 
     @Transactional
     public void deletePrompt(UUID promptId, UserDetails userDetails) throws AccessDeniedException {
-        User user = getOptionalUser(userDetails);
+        User user = getUserFromDetails(userDetails);
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
 
-        if (user == null || !prompt.getAuthor().getId().equals(user.getId())) {
+        if (!prompt.getAuthor().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not have permission to delete this prompt.");
         }
         promptRepository.delete(prompt);
@@ -160,8 +169,6 @@ public class PromptService {
         Page<Prompt> promptPage = promptRepository.findByBookmarkedByUsers_Username(username, pageable);
         return promptPage.map(prompt -> promptMapper.toDto(prompt, user));
     }
-
-
 
     @Transactional(readOnly = true)
     public Page<PromptDto> getPromptsByAuthorUsername(String username, int page, int size, UserDetails userDetails) {

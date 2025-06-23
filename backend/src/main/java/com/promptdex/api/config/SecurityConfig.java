@@ -1,3 +1,5 @@
+// COMPLETE AND CORRECTED FILE: src/main/java/com/promptdex/api/config/SecurityConfig.java
+
 package com.promptdex.api.config;
 
 import com.promptdex.api.security.JwtAuthenticationFilter;
@@ -5,10 +7,10 @@ import com.promptdex.api.security.oauth2.CustomOAuth2UserService;
 import com.promptdex.api.security.oauth2.CustomOidcUserService;
 import com.promptdex.api.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.promptdex.api.security.oauth2.OAuth2AuthenticationSuccessHandler;
-import com.promptdex.api.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus; // Import HttpStatus
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -18,6 +20,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint; // Import HttpStatusEntryPoint
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -64,9 +67,13 @@ public class SecurityConfig {
         http
                 .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
-                .formLogin(formLogin -> formLogin.disable()) // Explicitly disable the default form login page
-                .httpBasic(httpBasic -> httpBasic.disable()) // Disable basic auth
+                .formLogin(formLogin -> formLogin.disable())
+                .httpBasic(httpBasic -> httpBasic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // --- THIS IS THE FIX ---
+                // For a stateless REST API, when authentication fails, we should return an
+                // HTTP 401 Unauthorized status code, not redirect to a login page.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
                         // Public GET requests are allowed for browsing prompts, tags, and user profiles
                         .requestMatchers(HttpMethod.GET, "/api/prompts", "/api/prompts/**", "/api/tags", "/api/users/**").permitAll()
@@ -79,16 +86,15 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(authEndpoint -> authEndpoint
-                                .baseUri("/oauth2/authorize") // The URL our frontend links to
+                                .baseUri("/oauth2/authorize")
                                 .authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)
                         )
                         .redirectionEndpoint(redirectionEndpoint -> redirectionEndpoint
-                                // The URL Google/GitHub redirects back to
                                 .baseUri("/login/oauth2/code/*")
                         )
                         .userInfoEndpoint(userInfoEndpoint -> userInfoEndpoint
-                                .oidcUserService(customOidcUserService) // For Google (OIDC)
-                                .userService(customOAuth2UserService)   // For GitHub (OAuth2)
+                                .oidcUserService(customOidcUserService)
+                                .userService(customOAuth2UserService)
                         )
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                 );

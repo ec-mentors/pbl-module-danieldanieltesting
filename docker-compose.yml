@@ -1,0 +1,71 @@
+# Specify the Docker Compose file format version.
+version: '3.8'
+
+# Define the services (containers) that make up the application.
+services:
+  # --- PostgreSQL Database Service ---
+  db:
+    image: postgres:16-alpine
+    container_name: promptdex-db
+    ports:
+      # Expose the database port to the host machine for direct access if needed.
+      - "5432:5432"
+    volumes:
+      # Persist database data to a named volume on the host machine.
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      # Set credentials for the database. The backend will use these to connect.
+      - POSTGRES_USER=promptdex
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=promptdex_db
+    restart: unless-stopped
+
+  # --- Spring Boot Backend Service ---
+  backend:
+    container_name: promptdex-backend
+    # Build the backend image from the Dockerfile in the 'backend' directory.
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      # Map the backend's port 8080 to the host machine's port 8080.
+      - "8080:8080"
+    environment:
+      # Configure the database connection for the Spring application.
+      # It connects to the 'db' service on the internal Docker network.
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/promptdex_db
+      - SPRING_DATASOURCE_USERNAME=promptdex
+      - SPRING_DATASOURCE_PASSWORD=password
+      # This tells Hibernate to create/update tables based on entities at startup.
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      # The secret key for JWT generation. Should be a long, random string in production.
+      - JWT_SECRET=your-super-secret-and-long-jwt-key-that-is-at-least-512-bits
+      # Define the allowed redirect URI for OAuth2.
+      - APP_OAUTH2_AUTHORIZED-REDIRECT-URIS_0=http://localhost:5173/oauth2/redirect
+    depends_on:
+      # Ensure the 'db' service is started before the backend service.
+      - db
+    restart: unless-stopped
+
+  # --- Vite/Nginx Frontend Service ---
+  frontend:
+    container_name: promptdex-frontend
+    # Build the frontend image from the Dockerfile in the 'frontend' directory.
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # Pass the backend URL as a build-time argument.
+      # Vite will use this to set the VITE_API_URL environment variable during the build.
+      args:
+        VITE_API_URL: http://localhost:8080/api
+    ports:
+      # Map the frontend's Nginx port 80 to the host machine's port 5173.
+      - "5173:80"
+    depends_on:
+      # Ensure the 'backend' service is started before the frontend service.
+      - backend
+    restart: unless-stopped
+
+# Define the named volumes used by the services.
+volumes:
+  postgres_data:
