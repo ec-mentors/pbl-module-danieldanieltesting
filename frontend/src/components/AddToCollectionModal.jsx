@@ -1,4 +1,3 @@
-// src/components/AddToCollectionModal.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import * as api from '../services/api';
 import { toast } from 'react-toastify';
@@ -29,17 +28,20 @@ const AddToCollectionModal = ({ isOpen, onClose, promptId, promptTitle }) => {
     }
   }, [isOpen, fetchCollections]);
 
+  // --- FIXED METHOD ---
   const handleAddToCollection = async (collectionId) => {
     try {
-      await api.addPromptToCollection(collectionId, promptId);
-      const collection = collections.find(c => c.id === collectionId);
-      toast.success(`'${promptTitle}' added to '${collection.name}'!`);
-      onClose();
+      // The API now returns the updated collection object.
+      const response = await api.addPromptToCollection(collectionId, promptId);
+      const updatedCollection = response.data; // Get the returned DTO
+      toast.success(`'${promptTitle}' added to '${updatedCollection.name}'!`);
+      onClose(); // Close the modal on success
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to add to collection.");
+      toast.error(error.response?.data?.message || "Failed to add prompt to collection.");
     }
   };
 
+  // --- FIXED METHOD ---
   const handleCreateAndAdd = async (e) => {
       e.preventDefault();
       if (!newCollectionName.trim()) {
@@ -47,13 +49,18 @@ const AddToCollectionModal = ({ isOpen, onClose, promptId, promptTitle }) => {
           return;
       }
       try {
-          const response = await api.createCollection({ name: newCollectionName, description: '' });
-          const newCollection = response.data;
+          // Step 1: Create the collection
+          const createResponse = await api.createCollection({ name: newCollectionName, description: '' });
+          const newCollection = createResponse.data;
+
+          // Step 2: Call our robust handler to add the prompt. It will show the toast and close the modal.
           await handleAddToCollection(newCollection.id);
+          
+          // Reset local state after the flow is complete
           setIsCreating(false);
           setNewCollectionName('');
       } catch (error) {
-           toast.error(error.response?.data?.message || "Failed to create collection.");
+           toast.error(error.response?.data?.message || "Failed to create and add to collection.");
       }
   };
 
@@ -115,5 +122,4 @@ const AddToCollectionModal = ({ isOpen, onClose, promptId, promptTitle }) => {
   );
 };
 
-// --- THIS IS THE FIX ---
 export default AddToCollectionModal;

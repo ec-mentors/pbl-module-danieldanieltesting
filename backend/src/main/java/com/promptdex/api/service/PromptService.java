@@ -1,10 +1,9 @@
-// src/main/java/com/promptdex/api/service/PromptService.java
 package com.promptdex.api.service;
 
 import com.promptdex.api.dto.CreatePromptRequest;
 import com.promptdex.api.dto.PromptDto;
 import com.promptdex.api.exception.ResourceNotFoundException;
-import com.promptdex.api.mapper.PromptMapper; // <-- IMPORT THE MAPPER
+import com.promptdex.api.mapper.PromptMapper;
 import com.promptdex.api.model.Prompt;
 import com.promptdex.api.model.Tag;
 import com.promptdex.api.model.User;
@@ -31,21 +30,19 @@ public class PromptService {
     private final PromptRepository promptRepository;
     private final UserRepository userRepository;
     private final TagService tagService;
-    private final PromptMapper promptMapper; // <-- NEW DEPENDENCY
+    private final PromptMapper promptMapper;
 
-    // --- CONSTRUCTOR UPDATED ---
     public PromptService(PromptRepository promptRepository, UserRepository userRepository, TagService tagService, PromptMapper promptMapper) {
         this.promptRepository = promptRepository;
         this.userRepository = userRepository;
         this.tagService = tagService;
-        this.promptMapper = promptMapper; // <-- INJECT THE MAPPER
+        this.promptMapper = promptMapper;
     }
 
     private User getOptionalUser(UserDetails userDetails) {
         if (userDetails == null) {
             return null;
         }
-        // Use the non-bookmark-fetching method for efficiency unless bookmarks are needed
         return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
     }
 
@@ -55,7 +52,6 @@ public class PromptService {
         List<String> lowerCaseTags = (tags != null && !tags.isEmpty()) ? tags.stream().map(String::toLowerCase).collect(Collectors.toList()) : null;
         Page<Prompt> promptPage = promptRepository.searchAndPagePrompts(searchTerm, lowerCaseTags, pageable);
 
-        // --- REFACTORED TO USE MAPPER ---
         User currentUser = getOptionalUser(userDetails);
         return promptPage.map(prompt -> promptMapper.toDto(prompt, currentUser));
     }
@@ -64,8 +60,6 @@ public class PromptService {
     public PromptDto getPromptById(UUID promptId, UserDetails userDetails) {
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
-
-        // --- REFACTORED TO USE MAPPER ---
         User currentUser = getOptionalUser(userDetails);
         return promptMapper.toDto(prompt, currentUser);
     }
@@ -85,9 +79,8 @@ public class PromptService {
         prompt.setCategory(request.category());
         prompt.setAuthor(user);
 
-        Prompt savedPrompt = promptRepository.save(prompt);
+        Prompt savedPrompt = promptRepository.saveAndFlush(prompt);
 
-        // --- REFACTORED TO USE MAPPER ---
         return promptMapper.toDto(savedPrompt, user);
     }
 
@@ -109,7 +102,6 @@ public class PromptService {
 
         Prompt updatedPrompt = promptRepository.save(prompt);
 
-        // --- REFACTORED TO USE MAPPER ---
         return promptMapper.toDto(updatedPrompt, user);
     }
 
@@ -127,7 +119,6 @@ public class PromptService {
         prompt.setTags(managedTags);
         Prompt savedPrompt = promptRepository.save(prompt);
 
-        // --- REFACTORED TO USE MAPPER ---
         return promptMapper.toDto(savedPrompt, user);
     }
 
@@ -142,8 +133,6 @@ public class PromptService {
         }
         promptRepository.delete(prompt);
     }
-
-    // --- BOOKMARKING AND OTHER METHODS ---
 
     @Transactional
     public void addBookmark(UUID promptId, String username) {
@@ -169,10 +158,10 @@ public class PromptService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Prompt> promptPage = promptRepository.findByBookmarkedByUsers_Username(username, pageable);
-
-        // --- REFACTORED TO USE MAPPER ---
         return promptPage.map(prompt -> promptMapper.toDto(prompt, user));
     }
+
+
 
     @Transactional(readOnly = true)
     public Page<PromptDto> getPromptsByAuthorUsername(String username, int page, int size, UserDetails userDetails) {
@@ -184,7 +173,4 @@ public class PromptService {
         User currentUser = getOptionalUser(userDetails);
         return promptPage.map(prompt -> promptMapper.toDto(prompt, currentUser));
     }
-
-    // --- THE REDUNDANT METHOD HAS BEEN COMPLETELY REMOVED ---
-    // private PromptDto convertToDto(Prompt prompt, Set<UUID> bookmarkedPromptIds) { ... }
 }

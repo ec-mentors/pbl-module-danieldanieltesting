@@ -1,4 +1,3 @@
-// src/main/java/com/promptdex/api/controller/ReviewController.java
 package com.promptdex.api.controller;
 
 import com.promptdex.api.dto.CreateReviewRequest;
@@ -15,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/prompts/{promptId}/reviews") // Endpoint for actions related to a prompt
+@RequestMapping("/api/prompts") // This controller handles actions nested under prompts
 @PreAuthorize("isAuthenticated()")
 public class ReviewController {
 
@@ -25,14 +24,19 @@ public class ReviewController {
         this.reviewService = reviewService;
     }
 
-    @PostMapping
-    public ResponseEntity<ReviewDto> createReviewForPrompt(
+    /**
+     * Handles the creation of a new review for a specific prompt.
+     * POST /api/prompts/{promptId}/reviews
+     */
+    @PostMapping("/{promptId}/reviews")
+    public ResponseEntity<ReviewDto> createReview(
             @PathVariable UUID promptId,
             @Valid @RequestBody CreateReviewRequest reviewRequest,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        // This is the corrected call.
-        ReviewDto newReview = reviewService.addReviewToPrompt(promptId, reviewRequest, principal.getUsername());
+        // --- FIX: Called the correct method 'createReview' instead of 'addReviewToPrompt'
+        // --- and passed the full 'principal' object instead of just the username.
+        ReviewDto newReview = reviewService.createReview(promptId, reviewRequest, principal);
 
         return new ResponseEntity<>(newReview, HttpStatus.CREATED);
     }

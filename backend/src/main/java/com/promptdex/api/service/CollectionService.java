@@ -1,4 +1,3 @@
-// src/main/java/com/promptdex/api/service/CollectionService.java
 package com.promptdex.api.service;
 
 import com.promptdex.api.dto.CollectionDetailDto;
@@ -17,7 +16,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -48,18 +46,16 @@ public class CollectionService {
                         collection.getName(),
                         collection.getDescription(),
                         collection.getPrompts().size(),
-                        collection.getCreatedAt().toInstant(ZoneOffset.UTC)
+                        collection.getCreatedAt() // No conversion needed
                 ))
                 .collect(Collectors.toList());
     }
 
     public CollectionDetailDto getCollectionById(UUID collectionId, String username) {
         User user = findUserByUsername(username);
-        // Use the optimized query to fetch prompts eagerly
         Collection collection = collectionRepository.findByIdWithPrompts(collectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Collection not found with id: " + collectionId));
 
-        // Security check: ensure the user requesting the collection is the owner
         if (!collection.getOwner().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not have permission to view this collection.");
         }
@@ -73,8 +69,8 @@ public class CollectionService {
                 collection.getId(),
                 collection.getName(),
                 collection.getDescription(),
-                collection.getCreatedAt().toInstant(ZoneOffset.UTC),
-                collection.getUpdatedAt().toInstant(ZoneOffset.UTC),
+                collection.getCreatedAt(), // No conversion needed
+                collection.getUpdatedAt(), // No conversion needed
                 promptDtos
         );
     }
@@ -86,9 +82,6 @@ public class CollectionService {
         }
         Collection newCollection = new Collection(request.name(), request.description(), user);
 
-        // --- THIS IS THE FIX ---
-        // Use saveAndFlush() to immediately write to the DB and populate the @CreationTimestamp field
-        // on the returned object.
         Collection savedCollection = collectionRepository.saveAndFlush(newCollection);
 
         return new CollectionSummaryDto(
@@ -96,17 +89,18 @@ public class CollectionService {
                 savedCollection.getName(),
                 savedCollection.getDescription(),
                 0, // Starts with 0 prompts
-                savedCollection.getCreatedAt().toInstant(ZoneOffset.UTC)
+                savedCollection.getCreatedAt() // No conversion needed
         );
     }
 
-    public void addPromptToCollection(UUID collectionId, UUID promptId, String username) {
+    public CollectionDetailDto addPromptToCollection(UUID collectionId, UUID promptId, String username) {
         Collection collection = findCollectionByIdAndOwner(collectionId, username);
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
 
         collection.getPrompts().add(prompt);
         collectionRepository.save(collection);
+        return getCollectionById(collectionId, username);
     }
 
     public void removePromptFromCollection(UUID collectionId, UUID promptId, String username) {
@@ -135,7 +129,7 @@ public class CollectionService {
                 updatedCollection.getName(),
                 updatedCollection.getDescription(),
                 updatedCollection.getPrompts().size(),
-                updatedCollection.getCreatedAt().toInstant(ZoneOffset.UTC)
+                updatedCollection.getCreatedAt() // No conversion needed
         );
     }
 

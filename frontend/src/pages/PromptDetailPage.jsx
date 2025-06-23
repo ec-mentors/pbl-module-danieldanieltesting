@@ -1,4 +1,3 @@
-// src/pages/PromptDetailPage.jsx
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import * as api from '../services/api';
@@ -12,6 +11,7 @@ import { FaPlusCircle, FaUser, FaTag, FaRobot, FaCalendarAlt } from 'react-icons
 import ReviewCard from '../components/ReviewCard';
 import CreateReviewForm from '../components/CreateReviewForm';
 import StarRating from '../components/StarRating';
+import TimeAgo from '../components/TimeAgo'; // --- FIX: Import the new component
 
 const PromptDetailPage = () => {
   const [prompt, setPrompt] = useState(null);
@@ -64,12 +64,7 @@ const PromptDetailPage = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
-  };
+  // --- FIX: The formatDate function is no longer needed. ---
 
   if (loading) return <Spinner />;
   if (!prompt) return <div className="text-center mt-20">Prompt not found.</div>;
@@ -78,10 +73,7 @@ const PromptDetailPage = () => {
   const hasUserReviewed = isAuthenticated && prompt.reviews.some(review => review.authorUsername === user.username);
   const canUserReview = isAuthenticated && !isAuthor && !hasUserReviewed;
   
-  // --- FIX 1: Logic to determine if "edited" timestamp should be shown ---
-  const createdAt = new Date(prompt.createdAt);
-  const updatedAt = new Date(prompt.updatedAt);
-  const wasEdited = updatedAt.getTime() - createdAt.getTime() > 60000;
+  const wasEdited = prompt.createdAt !== prompt.updatedAt;
 
   return (
     <>
@@ -100,9 +92,9 @@ const PromptDetailPage = () => {
                 </Link>
                 <span className="mx-2">•</span>
                 <FaCalendarAlt className="mr-2" />
-                <span>{formatDate(prompt.createdAt)}</span>
-                {/* --- FIX 1 (continued): Conditionally display the edited timestamp --- */}
-                {wasEdited && <span className="italic text-gray-400 ml-2">(edited {formatDate(prompt.updatedAt)})</span>}
+                {/* --- FIX: Use the TimeAgo component --- */}
+                <TimeAgo dateString={prompt.createdAt} />
+                {wasEdited && <em className="ml-2">(edited <TimeAgo dateString={prompt.updatedAt} />)</em>}
               </div>
             </div>
             <div className="flex-shrink-0 w-full md:w-auto flex items-center space-x-3">
@@ -144,12 +136,10 @@ const PromptDetailPage = () => {
                 </div>
             </div>
             <div className="flex items-center gap-3">
-                {/* --- FIX 2: Use the isEditable={false} prop for display --- */}
                 <StarRating rating={prompt.averageRating} isEditable={false} />
                 <div className="ml-2">
                     <h4 className="text-sm font-semibold text-gray-500">Avg. Rating</h4>
                     <p className="font-bold text-gray-800">{prompt.averageRating.toFixed(1)} ({prompt.reviews.length} reviews)</p>
-
                 </div>
             </div>
           </div>

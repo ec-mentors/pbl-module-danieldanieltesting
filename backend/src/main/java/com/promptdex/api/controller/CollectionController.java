@@ -1,4 +1,3 @@
-// src/main/java/com/promptdex/api/controller/CollectionController.java
 package com.promptdex.api.controller;
 
 import com.promptdex.api.dto.CollectionDetailDto;
@@ -67,13 +66,14 @@ public class CollectionController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{collectionId}/prompts/{promptId}")
-    public ResponseEntity<Void> addPromptToCollection(
+    // --- FIXED METHOD ---
+    @PutMapping("/{collectionId}/prompts/{promptId}")
+    public ResponseEntity<CollectionDetailDto> addPromptToCollection(
             @PathVariable UUID collectionId,
             @PathVariable UUID promptId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        collectionService.addPromptToCollection(collectionId, promptId, principal.getUsername());
-        return ResponseEntity.ok().build();
+        CollectionDetailDto updatedCollection = collectionService.addPromptToCollection(collectionId, promptId, principal.getUsername());
+        return ResponseEntity.ok(updatedCollection);
     }
 
     @DeleteMapping("/{collectionId}/prompts/{promptId}")

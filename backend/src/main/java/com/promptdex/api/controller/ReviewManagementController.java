@@ -1,4 +1,3 @@
-// src/main/java/com/promptdex/api/controller/ReviewManagementController.java
 package com.promptdex.api.controller;
 
 import com.promptdex.api.dto.ReviewDto;
@@ -30,7 +29,8 @@ public class ReviewManagementController {
             @Valid @RequestBody UpdateReviewRequest reviewRequest,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        ReviewDto updatedReview = reviewService.updateReview(reviewId, reviewRequest, principal.getUsername());
+        // --- FIX: Pass the entire UserPrincipal object, not just the username string ---
+        ReviewDto updatedReview = reviewService.updateReview(reviewId, reviewRequest, principal);
         return ResponseEntity.ok(updatedReview);
     }
 
@@ -39,7 +39,8 @@ public class ReviewManagementController {
             @PathVariable UUID reviewId,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        reviewService.deleteReview(reviewId, principal.getUsername());
+        // --- FIX: Pass the entire UserPrincipal object, not just the username string ---
+        reviewService.deleteReview(reviewId, principal);
         return ResponseEntity.noContent().build();
     }
 }

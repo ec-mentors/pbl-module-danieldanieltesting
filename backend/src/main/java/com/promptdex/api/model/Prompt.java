@@ -1,4 +1,3 @@
-// src/main/java/com/promptdex/api/model/Prompt.java
 package com.promptdex.api.model;
 
 import jakarta.persistence.*;
@@ -10,7 +9,7 @@ import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -22,8 +21,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "prompts")
-@EqualsAndHashCode(exclude = {"bookmarkedByUsers", "tags", "collections"}) // <-- UPDATED
-@ToString(exclude = {"bookmarkedByUsers", "tags", "collections"}) // <-- UPDATED
+@EqualsAndHashCode(exclude = {"bookmarkedByUsers", "tags", "collections", "reviews"})
+@ToString(exclude = {"bookmarkedByUsers", "tags", "collections", "reviews"})
 public class Prompt {
 
     @Id
@@ -47,11 +46,11 @@ public class Prompt {
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)
@@ -76,7 +75,16 @@ public class Prompt {
     )
     private Set<Tag> tags = new HashSet<>();
 
-    // --- NEW RELATIONSHIP TO COLLECTIONS ---
     @ManyToMany(mappedBy = "prompts", fetch = FetchType.LAZY)
     private Set<Collection> collections = new HashSet<>();
+
+    @PreRemove
+    private void preRemoveCleanup() {
+        for (Collection collection : this.collections) {
+            collection.getPrompts().remove(this);
+        }
+        for (User user : this.bookmarkedByUsers) {
+            user.getBookmarkedPrompts().remove(this);
+        }
+    }
 }

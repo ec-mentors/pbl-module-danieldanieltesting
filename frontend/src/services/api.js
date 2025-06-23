@@ -1,4 +1,3 @@
-// src/services/api.js
 import axios from 'axios';
 
 // Create an Axios instance with a predefined configuration
@@ -36,7 +35,10 @@ export const getCollectionById = (collectionId) => api.get(`/collections/${colle
 export const createCollection = (collectionData) => api.post('/collections', collectionData);
 export const updateCollection = (collectionId, collectionData) => api.put(`/collections/${collectionId}`, collectionData);
 export const deleteCollection = (collectionId) => api.delete(`/collections/${collectionId}`);
-export const addPromptToCollection = (collectionId, promptId) => api.post(`/collections/${collectionId}/prompts/${promptId}`);
+
+// --- FIXED METHOD ---
+export const addPromptToCollection = (collectionId, promptId) => api.put(`/collections/${collectionId}/prompts/${promptId}`);
+
 export const removePromptFromCollection = (collectionId, promptId) => api.delete(`/collections/${collectionId}/prompts/${promptId}`);
 
 // === NEW/UPDATED REVIEW API FUNCTIONS ===
