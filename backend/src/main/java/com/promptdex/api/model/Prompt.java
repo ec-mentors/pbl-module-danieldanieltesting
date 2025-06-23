@@ -19,8 +19,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "prompts")
-@EqualsAndHashCode(exclude = {"bookmarkedByUsers", "tags", "collections", "reviews"})
-@ToString(exclude = {"bookmarkedByUsers", "tags", "collections", "reviews"})
+@EqualsAndHashCode(exclude = {"bookmarkedByUsers", "tags", "collections", "reviews"}) // Added reviews to exclude
+@ToString(exclude = {"bookmarkedByUsers", "tags", "collections", "reviews"}) // Added reviews to exclude
 public class Prompt {
 
     @Id
@@ -42,6 +42,9 @@ public class Prompt {
     @Column(nullable = false)
     private String category;
 
+    @Column(name = "average_rating") // New field for average rating
+    private Double averageRating;
+
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
@@ -54,7 +57,7 @@ public class Prompt {
 
     @OneToMany(
             mappedBy = "prompt",
-            cascade = CascadeType.ALL,
+            cascade = CascadeType.ALL, // Reviews are deleted if prompt is deleted
             orphanRemoval = true,
             fetch = FetchType.LAZY
     )
@@ -74,31 +77,45 @@ public class Prompt {
     @ManyToMany(mappedBy = "prompts", fetch = FetchType.LAZY)
     private Set<Collection> collections = new HashSet<>();
 
-    // --- THIS IS THE FIX ---
+
     @PrePersist
     protected void onCreate() {
-        // Only set the timestamp if it has not been set manually (e.g., in a test)
+        Instant now = Instant.now();
         if (this.createdAt == null) {
-            this.createdAt = Instant.now();
+            this.createdAt = now;
         }
         if (this.updatedAt == null) {
-            this.updatedAt = Instant.now();
+            this.updatedAt = now;
         }
+        // Initialize averageRating to null or 0.0 if preferred,
+        // though it will be updated when reviews are added.
+        // if (this.averageRating == null) {
+        // this.averageRating = 0.0;
+        // }
     }
 
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = Instant.now();
     }
-    // --- END FIX ---
 
     @PreRemove
     private void preRemoveCleanup() {
-        for (Collection collection : this.collections) {
+        // Clear associations to avoid constraint violations or lingering references
+        // For collections
+        for (Collection collection : new HashSet<>(this.collections)) { // Iterate over a copy
             collection.getPrompts().remove(this);
         }
-        for (User user : this.bookmarkedByUsers) {
+        this.collections.clear();
+
+        // For bookmarkedByUsers
+        for (User user : new HashSet<>(this.bookmarkedByUsers)) { // Iterate over a copy
             user.getBookmarkedPrompts().remove(this);
         }
+        this.bookmarkedByUsers.clear();
+
+        // Tags are managed by Prompt lifecycle usually, but if you had specific cleanup:
+        // this.tags.clear(); // If tags were only associated with this prompt and should be removed with it
+        // (depends on your Tag entity lifecycle) - typically not needed if Prompt_Tags is join table
     }
 }
