@@ -79,7 +79,7 @@ Welcome to PromptDex, your ultimate hub for discovering, creating, and sharing A
 
 ## 📚 Project Structure (Simplified)
 
-```promptdex/
+promptdex/
 ├── promptdex-api/                  # Backend Spring Boot application
 │   ├── src/
 │   │   └── main/
