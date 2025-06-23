@@ -1,20 +1,21 @@
 package com.promptdex.api.service;
 
 import com.promptdex.api.dto.ActivityFeedItemDto;
-import com.promptdex.api.dto.PromptDto;
 import com.promptdex.api.exception.ResourceNotFoundException;
 import com.promptdex.api.mapper.PromptMapper;
 import com.promptdex.api.model.Prompt;
 import com.promptdex.api.model.User;
 import com.promptdex.api.repository.PromptRepository;
 import com.promptdex.api.repository.UserRepository;
-import com.promptdex.api.security.UserPrincipal;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -33,27 +34,26 @@ public class FeedService {
         this.promptMapper = promptMapper;
     }
 
-    public Page<ActivityFeedItemDto> getFeedForUser(UserPrincipal principal, int page, int size) {
-        // Step 1: Get the current user and the list of users they follow.
+    public Page<ActivityFeedItemDto> getFeedForUser(UserDetails principal, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size); // Define pageable once at the top
+
         User currentUser = userRepository.findByUsernameWithFollowing(principal.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + principal.getUsername()));
 
-        // If the user isn't following anyone, return an empty page.
+        // --- THIS IS THE FIX ---
+        // If the user isn't following anyone, return a properly constructed empty page.
+        // This avoids serialization errors with Page.empty().
         if (currentUser.getFollowing() == null || currentUser.getFollowing().isEmpty()) {
-            return Page.empty();
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
         }
+        // --- END FIX ---
 
-        // Step 2: Extract the IDs of the users being followed.
         List<UUID> followedUserIds = currentUser.getFollowing().stream()
                 .map(User::getId)
                 .collect(Collectors.toList());
 
-        // Step 3: Use the repository to find all prompts from those users, paginated.
-        Pageable pageable = PageRequest.of(page, size);
         Page<Prompt> promptsFromFollowing = promptRepository.findByAuthor_IdInOrderByCreatedAtDesc(followedUserIds, pageable);
 
-        // Step 4: Map the Prompt entities to ActivityFeedItemDto objects.
-        // We pass `currentUser` to the mapper so it can correctly determine the `isBookmarked` status for each prompt.
         return promptsFromFollowing.map(prompt -> new ActivityFeedItemDto(
                 "NEW_PROMPT_FROM_FOLLOWING",
                 prompt.getCreatedAt(),

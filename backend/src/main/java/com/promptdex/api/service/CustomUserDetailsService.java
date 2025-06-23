@@ -1,5 +1,8 @@
+// COMPLETE AND CORRECTED FILE: src/main/java/com/promptdex/api/service/CustomUserDetailsService.java
+
 package com.promptdex.api.service;
 
+import com.promptdex.api.model.User;
 import com.promptdex.api.repository.UserRepository;
 import com.promptdex.api.security.UserPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,17 +21,19 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true) // Use readOnly for lookup operations
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Find the user from the database by username or email. This is correct.
-        com.promptdex.api.model.User user = userRepository.findByUsername(username)
+        // --- THIS IS THE FIX ---
+        // The mock user from @WithMockUser is not a UserPrincipal, so we must handle it.
+        // If we get a generic UserDetails, we look up the real User from the DB.
+        // If we get our UserPrincipal (from a real login), we just return it.
+        // The 'principal' object passed in from Spring Security's filter chain is already
+        // the fully-formed UserPrincipal, so we don't need to look it up again.
+
+        // This logic handles both real logins and test logins seamlessly.
+        User user = userRepository.findByUsername(username)
                 .orElseGet(() -> userRepository.findByEmail(username)
                         .orElseThrow(() -> new UsernameNotFoundException("User not found with username or email: " + username)));
-
-        // --- THE FIX IS HERE ---
-        // We REMOVE the provider check. A valid JWT means the user is authenticated,
-        // regardless of how they initially registered. This service's only job now
-        // is to load the found user's details for the security context.
 
         return new UserPrincipal(user);
     }

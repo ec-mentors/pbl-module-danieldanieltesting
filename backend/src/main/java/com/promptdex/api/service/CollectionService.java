@@ -12,7 +12,7 @@ import com.promptdex.api.model.User;
 import com.promptdex.api.repository.CollectionRepository;
 import com.promptdex.api.repository.PromptRepository;
 import com.promptdex.api.repository.UserRepository;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.AccessDeniedException; // No longer used in getCollectionById, but kept for other potential uses
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,7 +46,7 @@ public class CollectionService {
                         collection.getName(),
                         collection.getDescription(),
                         collection.getPrompts().size(),
-                        collection.getCreatedAt() // No conversion needed
+                        collection.getCreatedAt()
                 ))
                 .collect(Collectors.toList());
     }
@@ -56,8 +56,12 @@ public class CollectionService {
         Collection collection = collectionRepository.findByIdWithPrompts(collectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Collection not found with id: " + collectionId));
 
+        // --- THIS IS THE FIX ---
+        // Instead of throwing AccessDeniedException (403), we throw ResourceNotFoundException (404).
+        // This is a more secure practice as it doesn't reveal the existence of a resource
+        // to unauthorized users. It makes the endpoint's behavior consistent.
         if (!collection.getOwner().getId().equals(user.getId())) {
-            throw new AccessDeniedException("You do not have permission to view this collection.");
+            throw new ResourceNotFoundException("Collection not found with id: " + collectionId);
         }
 
         List<com.promptdex.api.dto.PromptDto> promptDtos = collection.getPrompts().stream()
@@ -69,8 +73,8 @@ public class CollectionService {
                 collection.getId(),
                 collection.getName(),
                 collection.getDescription(),
-                collection.getCreatedAt(), // No conversion needed
-                collection.getUpdatedAt(), // No conversion needed
+                collection.getCreatedAt(),
+                collection.getUpdatedAt(),
                 promptDtos
         );
     }
@@ -89,7 +93,7 @@ public class CollectionService {
                 savedCollection.getName(),
                 savedCollection.getDescription(),
                 0, // Starts with 0 prompts
-                savedCollection.getCreatedAt() // No conversion needed
+                savedCollection.getCreatedAt()
         );
     }
 
@@ -129,7 +133,7 @@ public class CollectionService {
                 updatedCollection.getName(),
                 updatedCollection.getDescription(),
                 updatedCollection.getPrompts().size(),
-                updatedCollection.getCreatedAt() // No conversion needed
+                updatedCollection.getCreatedAt()
         );
     }
 

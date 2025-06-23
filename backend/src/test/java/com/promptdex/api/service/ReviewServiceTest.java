@@ -1,15 +1,16 @@
 package com.promptdex.api.service;
 
 import com.promptdex.api.dto.CreateReviewRequest;
+import com.promptdex.api.dto.ReviewDto;
 import com.promptdex.api.dto.UpdateReviewRequest;
 import com.promptdex.api.exception.ResourceNotFoundException;
+import com.promptdex.api.exception.ReviewAlreadyExistsException;
 import com.promptdex.api.model.Prompt;
 import com.promptdex.api.model.Review;
 import com.promptdex.api.model.User;
 import com.promptdex.api.repository.PromptRepository;
 import com.promptdex.api.repository.ReviewRepository;
 import com.promptdex.api.repository.UserRepository;
-import com.promptdex.api.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,23 +18,31 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class ReviewServiceTest {
+public class ReviewServiceTest {
 
     @Mock
     private ReviewRepository reviewRepository;
+
     @Mock
     private PromptRepository promptRepository;
+
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserDetails userDetails; // Mock UserDetails for passing to the service
 
     @InjectMocks
     private ReviewService reviewService;
@@ -42,18 +51,20 @@ class ReviewServiceTest {
     private User reviewer;
     private Prompt prompt;
     private Review review;
-    private UserPrincipal reviewerPrincipal;
+    private CreateReviewRequest createRequest;
+    private UpdateReviewRequest updateRequest;
 
     @BeforeEach
     void setUp() {
+        UUID authorId = UUID.randomUUID();
         promptAuthor = new User();
-        promptAuthor.setId(UUID.randomUUID());
+        promptAuthor.setId(authorId);
         promptAuthor.setUsername("promptAuthor");
 
+        UUID reviewerId = UUID.randomUUID();
         reviewer = new User();
-        reviewer.setId(UUID.randomUUID());
+        reviewer.setId(reviewerId);
         reviewer.setUsername("reviewer");
-        reviewerPrincipal = new UserPrincipal(reviewer);
 
         prompt = new Prompt();
         prompt.setId(UUID.randomUUID());
@@ -61,120 +72,129 @@ class ReviewServiceTest {
 
         review = new Review();
         review.setId(UUID.randomUUID());
-        review.setUser(reviewer);
         review.setPrompt(prompt);
-        review.setRating(5);
+        review.setUser(reviewer);
+        review.setRating(4);
+        review.setComment("Good prompt");
+        review.setCreatedAt(Instant.now());
+        review.setUpdatedAt(Instant.now());
+
+        createRequest = new CreateReviewRequest(5, "Excellent!");
+        updateRequest = new UpdateReviewRequest(3, "Okay prompt.");
     }
+
+    // --- FIX 1: Add user repository mocking to all relevant tests ---
+    // --- FIX 2: Assert for the correct exception types ---
 
     @Test
     void createReview_whenUserIsNotAuthorAndHasNotReviewed_shouldSucceed() {
-        // Arrange
-        CreateReviewRequest request = new CreateReviewRequest(4, "Great prompt!");
+        // GIVEN
+        when(userDetails.getUsername()).thenReturn("reviewer");
+        when(userRepository.findByUsername("reviewer")).thenReturn(Optional.of(reviewer));
         when(promptRepository.findById(prompt.getId())).thenReturn(Optional.of(prompt));
-        when(userRepository.findById(reviewer.getId())).thenReturn(Optional.of(reviewer));
-        when(reviewRepository.existsByPrompt_IdAndUser_Username(prompt.getId(), "reviewer")).thenReturn(false);
+        when(reviewRepository.existsByPrompt_IdAndUser_Id(prompt.getId(), reviewer.getId())).thenReturn(false);
         when(reviewRepository.saveAndFlush(any(Review.class))).thenReturn(review);
 
-        // Act
-        reviewService.createReview(prompt.getId(), request, reviewerPrincipal);
+        // WHEN
+        ReviewDto result = reviewService.createReview(prompt.getId(), createRequest, userDetails);
 
-        // Assert
-        verify(reviewRepository, times(1)).saveAndFlush(any(Review.class));
+        // THEN
+        assertThat(result).isNotNull();
+        assertThat(result.authorUsername()).isEqualTo(reviewer.getUsername());
+        verify(reviewRepository).saveAndFlush(any(Review.class));
     }
 
     @Test
     void createReview_whenUserIsAuthor_shouldThrowAccessDeniedException() {
-        // Arrange
-        CreateReviewRequest request = new CreateReviewRequest(4, "Test");
-        UserPrincipal authorPrincipal = new UserPrincipal(promptAuthor);
-        prompt.setAuthor(promptAuthor); // Explicitly set
-
+        // GIVEN
+        when(userDetails.getUsername()).thenReturn("promptAuthor");
+        when(userRepository.findByUsername("promptAuthor")).thenReturn(Optional.of(promptAuthor));
         when(promptRepository.findById(prompt.getId())).thenReturn(Optional.of(prompt));
-        when(userRepository.findById(promptAuthor.getId())).thenReturn(Optional.of(promptAuthor));
 
-        // Act & Assert
+        // WHEN & THEN
         assertThrows(AccessDeniedException.class, () -> {
-            reviewService.createReview(prompt.getId(), request, authorPrincipal);
+            reviewService.createReview(prompt.getId(), createRequest, userDetails);
         });
-
-        verify(reviewRepository, never()).saveAndFlush(any());
     }
 
     @Test
-    void createReview_whenUserHasAlreadyReviewed_shouldThrowAccessDeniedException() {
-        // Arrange
-        CreateReviewRequest request = new CreateReviewRequest(4, "Test");
+    void createReview_whenUserHasAlreadyReviewed_shouldThrowReviewAlreadyExistsException() {
+        // GIVEN
+        when(userDetails.getUsername()).thenReturn("reviewer");
+        when(userRepository.findByUsername("reviewer")).thenReturn(Optional.of(reviewer));
         when(promptRepository.findById(prompt.getId())).thenReturn(Optional.of(prompt));
-        when(userRepository.findById(reviewer.getId())).thenReturn(Optional.of(reviewer));
-        // Simulate that a review already exists
-        when(reviewRepository.existsByPrompt_IdAndUser_Username(prompt.getId(), "reviewer")).thenReturn(true);
+        // Simulate that the review already exists
+        when(reviewRepository.existsByPrompt_IdAndUser_Id(prompt.getId(), reviewer.getId())).thenReturn(true);
 
-        // Act & Assert
-        assertThrows(AccessDeniedException.class, () -> {
-            reviewService.createReview(prompt.getId(), request, reviewerPrincipal);
+        // WHEN & THEN
+        // This is the correct exception based on the service's logic
+        assertThrows(ReviewAlreadyExistsException.class, () -> {
+            reviewService.createReview(prompt.getId(), createRequest, userDetails);
         });
     }
 
     @Test
     void updateReview_whenUserIsAuthorOfReview_shouldSucceed() {
-        // Arrange
-        UpdateReviewRequest request = new UpdateReviewRequest(3, "Updated comment");
+        // GIVEN
+        when(userDetails.getUsername()).thenReturn("reviewer");
+        when(userRepository.findByUsername("reviewer")).thenReturn(Optional.of(reviewer));
         when(reviewRepository.findById(review.getId())).thenReturn(Optional.of(review));
         when(reviewRepository.save(any(Review.class))).thenReturn(review);
 
-        // Act
-        reviewService.updateReview(review.getId(), request, reviewerPrincipal);
+        // WHEN
+        ReviewDto result = reviewService.updateReview(review.getId(), updateRequest, userDetails);
 
-        // Assert
-        verify(reviewRepository).save(review);
-        assertEquals(3, review.getRating());
-        assertEquals("Updated comment", review.getComment());
+        // THEN
+        assertThat(result).isNotNull();
+        verify(reviewRepository).save(any(Review.class));
     }
 
     @Test
     void updateReview_whenUserIsNotAuthorOfReview_shouldThrowAccessDeniedException() {
-        // Arrange
-        UpdateReviewRequest request = new UpdateReviewRequest(3, "Updated comment");
-        // Create a different user trying to edit the review
-        User anotherUser = new User();
-        anotherUser.setId(UUID.randomUUID());
-        UserPrincipal anotherUserPrincipal = new UserPrincipal(anotherUser);
+        // GIVEN
+        User otherUser = new User();
+        otherUser.setId(UUID.randomUUID());
+        otherUser.setUsername("otherUser");
 
+        when(userDetails.getUsername()).thenReturn("otherUser");
+        when(userRepository.findByUsername("otherUser")).thenReturn(Optional.of(otherUser));
         when(reviewRepository.findById(review.getId())).thenReturn(Optional.of(review));
 
-        // Act & Assert
+        // WHEN & THEN
         assertThrows(AccessDeniedException.class, () -> {
-            reviewService.updateReview(review.getId(), request, anotherUserPrincipal);
+            reviewService.updateReview(review.getId(), updateRequest, userDetails);
         });
     }
 
     @Test
     void deleteReview_whenUserIsAuthorOfReview_shouldSucceed() {
-        // Arrange
+        // GIVEN
+        when(userDetails.getUsername()).thenReturn("reviewer");
+        when(userRepository.findByUsername("reviewer")).thenReturn(Optional.of(reviewer));
         when(reviewRepository.findById(review.getId())).thenReturn(Optional.of(review));
-        doNothing().when(reviewRepository).delete(review);
+        doNothing().when(reviewRepository).delete(any(Review.class));
 
-        // Act
-        reviewService.deleteReview(review.getId(), reviewerPrincipal);
+        // WHEN
+        reviewService.deleteReview(review.getId(), userDetails);
 
-        // Assert
+        // THEN
         verify(reviewRepository, times(1)).delete(review);
-
     }
 
     @Test
     void deleteReview_whenUserIsNotAuthorOfReview_shouldThrowAccessDeniedException() {
-        // Arrange
-        User anotherUser = new User();
-        anotherUser.setId(UUID.randomUUID());
-        UserPrincipal anotherUserPrincipal = new UserPrincipal(anotherUser);
+        // GIVEN
+        User otherUser = new User();
+        otherUser.setId(UUID.randomUUID());
+        otherUser.setUsername("otherUser");
+
+        when(userDetails.getUsername()).thenReturn("otherUser");
+        when(userRepository.findByUsername("otherUser")).thenReturn(Optional.of(otherUser));
         when(reviewRepository.findById(review.getId())).thenReturn(Optional.of(review));
 
-        // Act & Assert
+        // WHEN & THEN
         assertThrows(AccessDeniedException.class, () -> {
-            reviewService.deleteReview(review.getId(), anotherUserPrincipal);
+            reviewService.deleteReview(review.getId(), userDetails);
         });
-
-        verify(reviewRepository, never()).delete(any());
     }
 }

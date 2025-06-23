@@ -6,8 +6,6 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.ToString;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,11 +42,9 @@ public class Prompt {
     @Column(nullable = false)
     private String category;
 
-    @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
@@ -77,6 +73,24 @@ public class Prompt {
 
     @ManyToMany(mappedBy = "prompts", fetch = FetchType.LAZY)
     private Set<Collection> collections = new HashSet<>();
+
+    // --- THIS IS THE FIX ---
+    @PrePersist
+    protected void onCreate() {
+        // Only set the timestamp if it has not been set manually (e.g., in a test)
+        if (this.createdAt == null) {
+            this.createdAt = Instant.now();
+        }
+        if (this.updatedAt == null) {
+            this.updatedAt = Instant.now();
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
+    // --- END FIX ---
 
     @PreRemove
     private void preRemoveCleanup() {

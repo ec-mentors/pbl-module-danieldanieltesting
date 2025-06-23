@@ -5,153 +5,167 @@ import com.promptdex.api.exception.ResourceNotFoundException;
 import com.promptdex.api.mapper.UserMapper;
 import com.promptdex.api.model.User;
 import com.promptdex.api.repository.UserRepository;
-import com.promptdex.api.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Unit tests for the UserService.
- * We use Mockito to simulate the behavior of the repository and mapper,
- * allowing us to test the service's logic in isolation.
- */
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-    // @Mock creates a mock implementation for the class it's annotating.
     @Mock
     private UserRepository userRepository;
 
     @Mock
     private UserMapper userMapper;
 
-    // @InjectMocks creates an instance of the class and injects the mocks that are created with @Mock into it.
+    @Mock
+    private UserDetails mockUserDetails;
+
     @InjectMocks
     private UserService userService;
 
-    private User testUser;
+    private User currentUser;
     private User userToFollow;
-    private UserPrincipal testUserPrincipal;
 
-    // This method runs before each test, setting up common objects.
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setId(UUID.randomUUID());
-        testUser.setUsername("testUser");
-        testUser.setFollowing(new HashSet<>()); // Initialize the set
+        currentUser = new User();
+        currentUser.setId(UUID.randomUUID());
+        currentUser.setUsername("testUser");
+        currentUser.setFollowing(new HashSet<>());
 
         userToFollow = new User();
         userToFollow.setId(UUID.randomUUID());
         userToFollow.setUsername("userToFollow");
         userToFollow.setFollowers(new HashSet<>());
 
-        // UserPrincipal is what Spring Security provides to our controllers.
-        testUserPrincipal = new UserPrincipal(testUser);
+        // --- FIX: The mock setup is REMOVED from the global @BeforeEach ---
     }
 
     @Test
     void followUser_shouldSuccessfullyFollowUser() {
-        // Arrange (Given): Define the behavior of our mocks.
-        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(testUser));
+        // Arrange
+        // --- FIX: The mock setup is MOVED here, where it is actually needed. ---
+        when(mockUserDetails.getUsername()).thenReturn(currentUser.getUsername());
+        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(currentUser));
         when(userRepository.findByUsername("userToFollow")).thenReturn(Optional.of(userToFollow));
-        when(userRepository.findById(userToFollow.getId())).thenReturn(Optional.of(userToFollow)); // For the re-fetch
 
-        // Act (When): Call the method we are testing.
-        userService.followUser("userToFollow", testUserPrincipal);
+        // Act
+        userService.followUser("userToFollow", mockUserDetails);
 
-        // Assert (Then): Verify the results.
-        // Verify that saveAndFlush was called exactly once on the repository.
-        verify(userRepository, times(1)).saveAndFlush(testUser);
-        // Verify that the mapper was called to create the response DTO.
+        // Assert
+        verify(userRepository, times(1)).save(currentUser);
         verify(userMapper, times(1)).toProfileDto(any(User.class), any(User.class));
-        // Assert that the user to follow is now in the test user's following list.
-        assertTrue(testUser.getFollowing().contains(userToFollow));
-    }
-
-    @Test
-    void followUser_shouldThrowException_whenFollowingSelf() {
-        // Arrange
-        String username = "testUser";
-
-        // Act & Assert
-        // We assert that calling the method with the same username throws an IllegalArgumentException.
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            userService.followUser(username, testUserPrincipal);
-        });
-
-        assertEquals("You cannot follow yourself.", exception.getMessage());
-        // Verify that the save method was never called.
-        verify(userRepository, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void followUser_shouldThrowException_whenUserToFollowNotFound() {
-        // Arrange
-        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(testUser));
-        when(userRepository.findByUsername("nonExistentUser")).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> {
-            userService.followUser("nonExistentUser", testUserPrincipal);
-        });
+        assertTrue(currentUser.getFollowing().contains(userToFollow));
+        assertTrue(userToFollow.getFollowers().contains(currentUser));
     }
 
     @Test
     void unfollowUser_shouldSuccessfullyUnfollowUser() {
         // Arrange
-        // Start with the testUser already following the userToFollow.
-        testUser.getFollowing().add(userToFollow);
+        currentUser.getFollowing().add(userToFollow);
+        userToFollow.getFollowers().add(currentUser);
 
-        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(testUser));
+        // --- FIX: The mock setup is MOVED here. ---
+        when(mockUserDetails.getUsername()).thenReturn(currentUser.getUsername());
+        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(currentUser));
         when(userRepository.findByUsername("userToFollow")).thenReturn(Optional.of(userToFollow));
-        when(userRepository.findById(userToFollow.getId())).thenReturn(Optional.of(userToFollow)); // For the re-fetch
 
         // Act
-        userService.unfollowUser("userToFollow", testUserPrincipal);
+        userService.unfollowUser("userToFollow", mockUserDetails);
 
         // Assert
-        verify(userRepository, times(1)).saveAndFlush(testUser);
-        assertFalse(testUser.getFollowing().contains(userToFollow));
+        verify(userRepository, times(1)).save(currentUser);
+        assertFalse(currentUser.getFollowing().contains(userToFollow));
+        assertFalse(userToFollow.getFollowers().contains(currentUser));
+    }
+
+    @Test
+    void followUser_shouldThrowException_whenFollowingSelf() {
+        // Arrange
+        // --- FIX: The mock setup is MOVED here. ---
+        when(mockUserDetails.getUsername()).thenReturn(currentUser.getUsername());
+        String username = "testUser";
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            userService.followUser(username, mockUserDetails);
+        });
+
+        assertEquals("You cannot follow yourself.", exception.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void followUser_shouldThrowException_whenUserToFollowNotFound() {
+        // Arrange
+        // --- FIX: The mock setup is MOVED here. ---
+        when(mockUserDetails.getUsername()).thenReturn(currentUser.getUsername());
+        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(currentUser));
+        when(userRepository.findByUsername("nonExistentUser")).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> {
+            userService.followUser("nonExistentUser", mockUserDetails);
+        });
     }
 
     @Test
     void getProfile_shouldReturnProfileDto_whenUserExists() {
         // Arrange
+        // --- FIX: The mock setup is MOVED here. ---
+        when(mockUserDetails.getUsername()).thenReturn(currentUser.getUsername());
         ProfileDto expectedProfile = new ProfileDto("userToFollow", 0, 0, false);
         when(userRepository.findByUsername("userToFollow")).thenReturn(Optional.of(userToFollow));
-        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(testUser));
-        when(userMapper.toProfileDto(userToFollow, testUser)).thenReturn(expectedProfile);
+        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(currentUser));
+        when(userMapper.toProfileDto(userToFollow, currentUser)).thenReturn(expectedProfile);
 
         // Act
-        ProfileDto actualProfile = userService.getProfile("userToFollow", testUserPrincipal);
+        ProfileDto actualProfile = userService.getProfile("userToFollow", mockUserDetails);
 
         // Assert
         assertNotNull(actualProfile);
         assertEquals("userToFollow", actualProfile.username());
-        verify(userMapper, times(1)).toProfileDto(userToFollow, testUser);
+        verify(userMapper, times(1)).toProfileDto(userToFollow, currentUser);
+    }
+
+    @Test
+    void getProfile_withNullPrincipal_shouldReturnPublicProfile() {
+        // This test verifies behavior for guest users (no logged-in principal)
+        // Arrange
+        ProfileDto expectedProfile = new ProfileDto("userToFollow", 0, 0, false);
+        when(userRepository.findByUsername("userToFollow")).thenReturn(Optional.of(userToFollow));
+        when(userMapper.toProfileDto(userToFollow, null)).thenReturn(expectedProfile); // currentUser is null
+
+        // Act
+        ProfileDto actualProfile = userService.getProfile("userToFollow", null); // Pass null for the principal
+
+        // Assert
+        assertNotNull(actualProfile);
+        verify(userRepository, never()).findByUsernameWithFollowing(any()); // Should not attempt to load a current user
     }
 
     @Test
     void getProfile_shouldThrowException_whenUserNotFound() {
         // Arrange
+        // This test doesn't need the principal mock because it fails before using it.
         when(userRepository.findByUsername("nonExistentUser")).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> {
-            userService.getProfile("nonExistentUser", testUserPrincipal);
+            userService.getProfile("nonExistentUser", mockUserDetails);
         });
     }
 }
