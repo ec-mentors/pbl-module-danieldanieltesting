@@ -118,8 +118,6 @@ promptdex/
 └── package.json
 
 
-
-
 ---
 
 ## 🚀 Getting Started
