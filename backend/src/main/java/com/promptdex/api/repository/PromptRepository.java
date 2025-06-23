@@ -40,4 +40,15 @@ public interface PromptRepository extends JpaRepository<Prompt, UUID> {
     Page<Prompt> findByAuthor_Username(String username, Pageable pageable);
 
     Page<Prompt> findByBookmarkedByUsers_Username(String username, Pageable pageable);
+
+    // --- NEW METHOD FOR THE ACTIVITY FEED ---
+    /**
+     * Finds prompts created by a specific set of users (authors), ordered by creation date descending.
+     * This is the core query for the "prompts from people you follow" activity feed.
+     *
+     * @param authorIds The list of User IDs to fetch prompts from.
+     * @param pageable  The pagination information.
+     * @return A page of prompts from the specified authors.
+     */
+    Page<Prompt> findByAuthor_IdInOrderByCreatedAtDesc(List<UUID> authorIds, Pageable pageable);
 }

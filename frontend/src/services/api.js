@@ -44,10 +44,12 @@ export const deleteReview = (reviewId) => api.delete(`/reviews/${reviewId}`);
 
 // === USER & FOLLOW API FUNCTIONS ===
 export const getUserProfile = (username) => api.get(`/users/${username}/profile`);
-// --- NEW EXPORTED FUNCTION ---
 export const getPromptsByUsername = (username, params) => api.get(`/users/${username}/prompts`, { params });
 export const followUser = (username) => api.post(`/users/${username}/follow`);
 export const unfollowUser = (username) => api.post(`/users/${username}/unfollow`);
+
+// === FEED API FUNCTION (NEW) ===
+export const getFeed = (params) => api.get('/feed', { params });
 
 
 export default api;
