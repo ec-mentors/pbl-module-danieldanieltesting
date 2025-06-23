@@ -1,4 +1,3 @@
-// src/main/java/com/promptdex/api/exception/GlobalExceptionHandler.java
 package com.promptdex.api.exception;
 
 import com.promptdex.api.dto.ErrorResponse;
@@ -21,13 +20,11 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    // --- START OF NEW HANDLER ---
     @ExceptionHandler(CollectionAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleCollectionAlreadyExistsException(CollectionAlreadyExistsException ex, WebRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), Instant.now());
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
-    // --- END OF NEW HANDLER ---
 
     // Handler for bad login credentials (wrong username/password)
     @ExceptionHandler(BadCredentialsException.class)
@@ -41,6 +38,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex, WebRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), Instant.now());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    // --- UPDATED: Renamed for clarity and to catch self-follow errors ---
+    // Handler for registration errors and other invalid arguments
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), Instant.now());
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     // Handler for registration errors (username/email already taken)

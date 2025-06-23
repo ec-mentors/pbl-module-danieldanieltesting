@@ -68,8 +68,8 @@ public class SecurityConfig {
                 .httpBasic(httpBasic -> httpBasic.disable()) // Disable basic auth
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public GET requests are allowed
-                        .requestMatchers(HttpMethod.GET, "/api/prompts", "/api/prompts/**", "/api/tags").permitAll()
+                        // Public GET requests are allowed for browsing prompts, tags, and user profiles
+                        .requestMatchers(HttpMethod.GET, "/api/prompts", "/api/prompts/**", "/api/tags", "/api/users/**").permitAll()
                         // Local authentication (register/login) is allowed
                         .requestMatchers("/api/auth/**").permitAll()
                         // The entire OAuth2 flow must be public

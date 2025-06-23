@@ -1,7 +1,10 @@
 package com.promptdex.api.controller;
 
+import com.promptdex.api.dto.ProfileDto;
 import com.promptdex.api.dto.PromptDto;
+import com.promptdex.api.security.UserPrincipal;
 import com.promptdex.api.service.PromptService;
+import com.promptdex.api.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,9 +17,40 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final PromptService promptService;
+    private final UserService userService;
 
-    public UserController(PromptService promptService) {
+    public UserController(PromptService promptService, UserService userService) {
         this.promptService = promptService;
+        this.userService = userService;
+    }
+
+    // --- NEW ENDPOINT ---
+    @GetMapping("/{username}/profile")
+    public ResponseEntity<ProfileDto> getUserProfile(
+            @PathVariable String username,
+            @AuthenticationPrincipal UserPrincipal principal) { // Can be null for guests
+        ProfileDto profile = userService.getProfile(username, principal);
+        return ResponseEntity.ok(profile);
+    }
+
+    // --- NEW ENDPOINT ---
+    @PostMapping("/{username}/follow")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ProfileDto> followUser(
+            @PathVariable String username,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ProfileDto profile = userService.followUser(username, principal);
+        return ResponseEntity.ok(profile);
+    }
+
+    // --- NEW ENDPOINT ---
+    @PostMapping("/{username}/unfollow")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ProfileDto> unfollowUser(
+            @PathVariable String username,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        ProfileDto profile = userService.unfollowUser(username, principal);
+        return ResponseEntity.ok(profile);
     }
 
     @GetMapping("/{username}/prompts")
@@ -30,7 +64,6 @@ public class UserController {
         return ResponseEntity.ok(promptsPage);
     }
 
-    // --- NEW ENDPOINT FOR "MY BOOKMARKS" ---
     @GetMapping("/me/bookmarks")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<PromptDto>> getMyBookmarkedPrompts(

@@ -1,4 +1,3 @@
-// src/main/java/com/promptdex/api/model/User.java
 package com.promptdex.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -18,8 +17,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "users")
-@EqualsAndHashCode(exclude = {"bookmarkedPrompts", "collections"}) // <-- UPDATED
-@ToString(exclude = {"bookmarkedPrompts", "collections"}) // <-- UPDATED
+@EqualsAndHashCode(exclude = {"bookmarkedPrompts", "collections", "following", "followers"})
+@ToString(exclude = {"bookmarkedPrompts", "collections", "following", "followers"})
 public class User {
 
     @Id
@@ -48,7 +47,6 @@ public class User {
     )
     private Set<Prompt> bookmarkedPrompts = new HashSet<>();
 
-    // --- NEW RELATIONSHIP TO COLLECTIONS ---
     @OneToMany(
             mappedBy = "owner",
             cascade = CascadeType.ALL,
@@ -56,4 +54,16 @@ public class User {
             fetch = FetchType.LAZY
     )
     private Set<Collection> collections = new HashSet<>();
+
+    // --- NEW RELATIONSHIPS FOR FOLLOWING ---
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "user_follows",
+            joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "followed_id", referencedColumnName = "id")
+    )
+    private Set<User> following = new HashSet<>();
+
+    @ManyToMany(mappedBy = "following", fetch = FetchType.LAZY)
+    private Set<User> followers = new HashSet<>();
 }

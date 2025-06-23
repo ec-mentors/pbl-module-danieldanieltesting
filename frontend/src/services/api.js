@@ -35,16 +35,19 @@ export const getCollectionById = (collectionId) => api.get(`/collections/${colle
 export const createCollection = (collectionData) => api.post('/collections', collectionData);
 export const updateCollection = (collectionId, collectionData) => api.put(`/collections/${collectionId}`, collectionData);
 export const deleteCollection = (collectionId) => api.delete(`/collections/${collectionId}`);
-
-// --- FIXED METHOD ---
 export const addPromptToCollection = (collectionId, promptId) => api.put(`/collections/${collectionId}/prompts/${promptId}`);
-
 export const removePromptFromCollection = (collectionId, promptId) => api.delete(`/collections/${collectionId}/prompts/${promptId}`);
 
-// === NEW/UPDATED REVIEW API FUNCTIONS ===
-// POST to /prompts/{promptId}/reviews
+// === REVIEW API FUNCTIONS ===
 export const createReview = (promptId, reviewData) => api.post(`/prompts/${promptId}/reviews`, reviewData);
-// DELETE to /reviews/{reviewId}
 export const deleteReview = (reviewId) => api.delete(`/reviews/${reviewId}`);
+
+// === USER & FOLLOW API FUNCTIONS ===
+export const getUserProfile = (username) => api.get(`/users/${username}/profile`);
+// --- NEW EXPORTED FUNCTION ---
+export const getPromptsByUsername = (username, params) => api.get(`/users/${username}/prompts`, { params });
+export const followUser = (username) => api.post(`/users/${username}/follow`);
+export const unfollowUser = (username) => api.post(`/users/${username}/unfollow`);
+
 
 export default api;

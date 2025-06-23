@@ -10,10 +10,14 @@ import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByUsername(String username);
-    Optional<User> findByEmail(String email); // --- NEW METHOD ---
+    Optional<User> findByEmail(String email);
     Boolean existsByUsername(String username);
     Boolean existsByEmail(String email);
 
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.bookmarkedPrompts WHERE u.username = :username")
     Optional<User> findByUsernameWithBookmarks(@Param("username") String username);
+
+    // --- NEW METHOD ---
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.following WHERE u.username = :username")
+    Optional<User> findByUsernameWithFollowing(@Param("username") String username);
 }
