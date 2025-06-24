@@ -78,6 +78,7 @@ Welcome to PromptDex, your ultimate hub for discovering, creating, and sharing A
 ---
 
 ## 📚 Project Structure (Simplified)
+```
 
 promptdex/
 ├── promptdex-api/                  # Backend Spring Boot application
@@ -122,6 +123,7 @@ promptdex/
     ├── index.html
     ├── package.json
     └── vite.config.ts
+```
 
 
 ---
