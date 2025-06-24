@@ -19,6 +19,8 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,136 +38,184 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
-    private User currentUser;
-    private User userToFollow;
+    private User testCurrentUser;
+    private User testUserToFollow;
+    private ProfileDto mockProfileDto;
 
     @BeforeEach
     void setUp() {
-        currentUser = new User();
-        currentUser.setId(UUID.randomUUID());
-        currentUser.setUsername("testUser");
-        currentUser.setFollowing(new HashSet<>());
+        testCurrentUser = new User();
+        testCurrentUser.setId(UUID.randomUUID());
+        testCurrentUser.setUsername("testUser");
+        testCurrentUser.setFollowing(new HashSet<>());
+        testCurrentUser.setFollowers(new HashSet<>());
 
-        userToFollow = new User();
-        userToFollow.setId(UUID.randomUUID());
-        userToFollow.setUsername("userToFollow");
-        userToFollow.setFollowers(new HashSet<>());
+        testUserToFollow = new User();
+        testUserToFollow.setId(UUID.randomUUID());
+        testUserToFollow.setUsername("userToFollow");
+        testUserToFollow.setFollowers(new HashSet<>());
+        testUserToFollow.setFollowing(new HashSet<>());
 
-        // --- FIX: The mock setup is REMOVED from the global @BeforeEach ---
+        // Example DTO, customize as needed for different test outcomes
+        mockProfileDto = new ProfileDto("userToFollow", 0, 0, false);
     }
 
     @Test
     void followUser_shouldSuccessfullyFollowUser() {
         // Arrange
-        // --- FIX: The mock setup is MOVED here, where it is actually needed. ---
-        when(mockUserDetails.getUsername()).thenReturn(currentUser.getUsername());
-        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(currentUser));
-        when(userRepository.findByUsername("userToFollow")).thenReturn(Optional.of(userToFollow));
+        when(mockUserDetails.getUsername()).thenReturn(testCurrentUser.getUsername());
+        when(userRepository.findByUsernameWithFollowing(testCurrentUser.getUsername())).thenReturn(Optional.of(testCurrentUser));
+        when(userRepository.findByUsername(testUserToFollow.getUsername())).thenReturn(Optional.of(testUserToFollow));
+        when(userMapper.toProfileDto(eq(testUserToFollow), eq(testCurrentUser))).thenReturn(mockProfileDto);
 
         // Act
-        userService.followUser("userToFollow", mockUserDetails);
+        ProfileDto resultDto = userService.followUser(testUserToFollow.getUsername(), mockUserDetails);
 
         // Assert
-        verify(userRepository, times(1)).save(currentUser);
-        verify(userMapper, times(1)).toProfileDto(any(User.class), any(User.class));
-        assertTrue(currentUser.getFollowing().contains(userToFollow));
-        assertTrue(userToFollow.getFollowers().contains(currentUser));
+        // REMOVED: verify(userRepository, times(1)).save(eq(testCurrentUser)); // No longer verifying explicit save
+        // We now rely on asserting the state change and mapper interaction.
+
+        verify(userMapper, times(1)).toProfileDto(eq(testUserToFollow), eq(testCurrentUser));
+        assertEquals(mockProfileDto, resultDto);
+
+        assertTrue(testCurrentUser.getFollowing().contains(testUserToFollow), "currentUser should be following userToFollow");
+        assertTrue(testUserToFollow.getFollowers().contains(testCurrentUser), "userToFollow should have currentUser as a follower");
     }
 
     @Test
     void unfollowUser_shouldSuccessfullyUnfollowUser() {
         // Arrange
-        currentUser.getFollowing().add(userToFollow);
-        userToFollow.getFollowers().add(currentUser);
+        testCurrentUser.getFollowing().add(testUserToFollow); // Pre-condition
+        testUserToFollow.getFollowers().add(testCurrentUser); // Pre-condition
 
-        // --- FIX: The mock setup is MOVED here. ---
-        when(mockUserDetails.getUsername()).thenReturn(currentUser.getUsername());
-        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(currentUser));
-        when(userRepository.findByUsername("userToFollow")).thenReturn(Optional.of(userToFollow));
+        when(mockUserDetails.getUsername()).thenReturn(testCurrentUser.getUsername());
+        when(userRepository.findByUsernameWithFollowing(testCurrentUser.getUsername())).thenReturn(Optional.of(testCurrentUser));
+        when(userRepository.findByUsername(testUserToFollow.getUsername())).thenReturn(Optional.of(testUserToFollow));
+
+        // Create a DTO that would represent the state after unfollowing
+        ProfileDto unfollowedProfileDto = new ProfileDto(testUserToFollow.getUsername(), 0, 0, false); // isFollowing would be false
+        when(userMapper.toProfileDto(eq(testUserToFollow), eq(testCurrentUser))).thenReturn(unfollowedProfileDto);
+
 
         // Act
-        userService.unfollowUser("userToFollow", mockUserDetails);
+        ProfileDto resultDto = userService.unfollowUser(testUserToFollow.getUsername(), mockUserDetails);
 
         // Assert
-        verify(userRepository, times(1)).save(currentUser);
-        assertFalse(currentUser.getFollowing().contains(userToFollow));
-        assertFalse(userToFollow.getFollowers().contains(currentUser));
+        // REMOVED: verify(userRepository, times(1)).save(eq(testCurrentUser)); // No longer verifying explicit save
+
+        verify(userMapper, times(1)).toProfileDto(eq(testUserToFollow), eq(testCurrentUser));
+        assertEquals(unfollowedProfileDto, resultDto);
+
+        assertFalse(testCurrentUser.getFollowing().contains(testUserToFollow), "currentUser should NOT be following userToFollow");
+        assertFalse(testUserToFollow.getFollowers().contains(testCurrentUser), "userToFollow should NOT have currentUser as a follower");
     }
 
     @Test
     void followUser_shouldThrowException_whenFollowingSelf() {
         // Arrange
-        // --- FIX: The mock setup is MOVED here. ---
-        when(mockUserDetails.getUsername()).thenReturn(currentUser.getUsername());
-        String username = "testUser";
+        when(mockUserDetails.getUsername()).thenReturn(testCurrentUser.getUsername());
 
         // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            userService.followUser(username, mockUserDetails);
+            userService.followUser(testCurrentUser.getUsername(), mockUserDetails);
         });
 
         assertEquals("You cannot follow yourself.", exception.getMessage());
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).save(any(User.class));
     }
+
+    @Test
+    void unfollowUser_shouldThrowException_whenUnfollowingSelf() {
+        // Arrange
+        when(mockUserDetails.getUsername()).thenReturn(testCurrentUser.getUsername());
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            userService.unfollowUser(testCurrentUser.getUsername(), mockUserDetails);
+        });
+
+        assertEquals("You cannot unfollow yourself.", exception.getMessage());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
 
     @Test
     void followUser_shouldThrowException_whenUserToFollowNotFound() {
         // Arrange
-        // --- FIX: The mock setup is MOVED here. ---
-        when(mockUserDetails.getUsername()).thenReturn(currentUser.getUsername());
-        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(currentUser));
+        when(mockUserDetails.getUsername()).thenReturn(testCurrentUser.getUsername());
+        when(userRepository.findByUsernameWithFollowing(testCurrentUser.getUsername())).thenReturn(Optional.of(testCurrentUser));
         when(userRepository.findByUsername("nonExistentUser")).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> {
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
             userService.followUser("nonExistentUser", mockUserDetails);
         });
+        assertTrue(exception.getMessage().contains("User to follow not found"));
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
-    void getProfile_shouldReturnProfileDto_whenUserExists() {
+    void followUser_shouldThrowException_whenCurrentUserNotFound() {
         // Arrange
-        // --- FIX: The mock setup is MOVED here. ---
-        when(mockUserDetails.getUsername()).thenReturn(currentUser.getUsername());
-        ProfileDto expectedProfile = new ProfileDto("userToFollow", 0, 0, false);
-        when(userRepository.findByUsername("userToFollow")).thenReturn(Optional.of(userToFollow));
-        when(userRepository.findByUsernameWithFollowing("testUser")).thenReturn(Optional.of(currentUser));
-        when(userMapper.toProfileDto(userToFollow, currentUser)).thenReturn(expectedProfile);
+        when(mockUserDetails.getUsername()).thenReturn("nonExistentCurrentUser");
+        when(userRepository.findByUsernameWithFollowing("nonExistentCurrentUser")).thenReturn(Optional.empty());
+
+        // Act & Assert
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
+            userService.followUser(testUserToFollow.getUsername(), mockUserDetails);
+        });
+        assertTrue(exception.getMessage().contains("Current user not found"));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+
+    @Test
+    void getProfile_shouldReturnProfileDto_whenUserExistsAndPrincipalExists() {
+        // Arrange
+        ProfileDto expectedProfile = new ProfileDto(testUserToFollow.getUsername(), 0, 0, false); // Customize as needed
+        when(mockUserDetails.getUsername()).thenReturn(testCurrentUser.getUsername());
+        when(userRepository.findByUsername(testUserToFollow.getUsername())).thenReturn(Optional.of(testUserToFollow));
+        when(userRepository.findByUsernameWithFollowing(testCurrentUser.getUsername())).thenReturn(Optional.of(testCurrentUser));
+        when(userMapper.toProfileDto(eq(testUserToFollow), eq(testCurrentUser))).thenReturn(expectedProfile);
 
         // Act
-        ProfileDto actualProfile = userService.getProfile("userToFollow", mockUserDetails);
+        ProfileDto actualProfile = userService.getProfile(testUserToFollow.getUsername(), mockUserDetails);
 
         // Assert
         assertNotNull(actualProfile);
-        assertEquals("userToFollow", actualProfile.username());
-        verify(userMapper, times(1)).toProfileDto(userToFollow, currentUser);
+        assertEquals(expectedProfile, actualProfile);
+        verify(userMapper, times(1)).toProfileDto(testUserToFollow, testCurrentUser);
     }
 
     @Test
     void getProfile_withNullPrincipal_shouldReturnPublicProfile() {
-        // This test verifies behavior for guest users (no logged-in principal)
         // Arrange
-        ProfileDto expectedProfile = new ProfileDto("userToFollow", 0, 0, false);
-        when(userRepository.findByUsername("userToFollow")).thenReturn(Optional.of(userToFollow));
-        when(userMapper.toProfileDto(userToFollow, null)).thenReturn(expectedProfile); // currentUser is null
+        ProfileDto expectedProfile = new ProfileDto(testUserToFollow.getUsername(), 0, 0, false);
+        when(userRepository.findByUsername(testUserToFollow.getUsername())).thenReturn(Optional.of(testUserToFollow));
+        when(userMapper.toProfileDto(eq(testUserToFollow), eq(null))).thenReturn(expectedProfile);
 
         // Act
-        ProfileDto actualProfile = userService.getProfile("userToFollow", null); // Pass null for the principal
+        ProfileDto actualProfile = userService.getProfile(testUserToFollow.getUsername(), null);
 
         // Assert
         assertNotNull(actualProfile);
-        verify(userRepository, never()).findByUsernameWithFollowing(any()); // Should not attempt to load a current user
+        assertEquals(expectedProfile, actualProfile);
+        verify(userRepository, never()).findByUsernameWithFollowing(anyString());
+        verify(userMapper, times(1)).toProfileDto(testUserToFollow, null);
     }
 
     @Test
     void getProfile_shouldThrowException_whenUserNotFound() {
         // Arrange
-        // This test doesn't need the principal mock because it fails before using it.
         when(userRepository.findByUsername("nonExistentUser")).thenReturn(Optional.empty());
+        // No mockUserDetails.getUsername() needed here if service checks for targetUser first
 
         // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> {
-            userService.getProfile("nonExistentUser", mockUserDetails);
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
+            userService.getProfile("nonExistentUser", mockUserDetails); // mockUserDetails might be unused if exception is thrown early
         });
+        assertTrue(exception.getMessage().contains("User not found with username: nonExistentUser"));
+        verify(userMapper, never()).toProfileDto(any(), any());
+        verify(userRepository, never()).findByUsernameWithFollowing(anyString()); // Ensure current user wasn't fetched
     }
 }

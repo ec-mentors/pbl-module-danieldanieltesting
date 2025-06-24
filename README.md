@@ -124,8 +124,6 @@ promptdex/
     └── vite.config.ts
 
 
-
-
 ---
 
 ## 🚀 Getting Started

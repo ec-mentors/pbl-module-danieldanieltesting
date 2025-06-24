@@ -1,5 +1,3 @@
-// COMPLETE AND CORRECTED FILE: src/main/java/com/promptdex/api/controller/UserController.java
-
 package com.promptdex.api.controller;
 
 import com.promptdex.api.dto.ProfileDto;
@@ -10,7 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails; // Using the standard interface
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

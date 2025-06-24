@@ -18,7 +18,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "prompts")
+@Table(name = "prompts") // if not necessary take out everywhere
 @EqualsAndHashCode(exclude = {"bookmarkedByUsers", "tags", "collections", "reviews"}) // Added reviews to exclude
 @ToString(exclude = {"bookmarkedByUsers", "tags", "collections", "reviews"}) // Added reviews to exclude
 public class Prompt {

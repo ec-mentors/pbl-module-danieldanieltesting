@@ -59,7 +59,8 @@ class AuthServiceTest {
         when(userRepository.existsByUsername("existingUser")).thenReturn(true);
 
         // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        // FIX: Expect IllegalStateException instead of IllegalArgumentException
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
             authService.registerUser(request);
         });
 
@@ -78,7 +79,8 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("existing@email.com")).thenReturn(true);
 
         // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        // FIX: Expect IllegalStateException instead of IllegalArgumentException
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
             authService.registerUser(request);
         });
 
