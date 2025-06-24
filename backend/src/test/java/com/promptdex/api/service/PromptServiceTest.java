@@ -7,6 +7,8 @@ import com.promptdex.api.model.Prompt;
 import com.promptdex.api.model.User;
 import com.promptdex.api.repository.PromptRepository;
 import com.promptdex.api.repository.UserRepository;
+// Import ResourceNotFoundException if you were to assert it for other tests
+// import com.promptdex.api.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +23,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq; // Import eq for specific argument matching
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,10 +34,10 @@ class PromptServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private TagService tagService;
+    private TagService tagService; // Mocked, though not directly used in these specific fixed tests
     @Mock
     private PromptMapper promptMapper;
-    @Mock // Mock UserDetails as it's an interface passed from the controller
+    @Mock
     private UserDetails userDetails;
 
     @InjectMocks
@@ -44,6 +47,7 @@ class PromptServiceTest {
     private User otherUser;
     private Prompt prompt;
     private UUID promptId;
+    private PromptDto mockPromptDto; // To use for methods returning PromptDto
 
     @BeforeEach
     void setUp() {
@@ -61,6 +65,9 @@ class PromptServiceTest {
         prompt.setId(promptId);
         prompt.setAuthor(author);
         prompt.setTitle("Original Title");
+        // prompt.setTags(new HashSet<>()); // Initialize if findByIdWithAuthorAndTags interaction is complex
+
+        mockPromptDto = mock(PromptDto.class); // Initialize a generic mock DTO
     }
 
     @Test
@@ -69,34 +76,50 @@ class PromptServiceTest {
         CreatePromptRequest request = new CreatePromptRequest("Title", "Text", "Desc", "Model", "Category");
         when(userDetails.getUsername()).thenReturn("author");
         when(userRepository.findByUsername("author")).thenReturn(Optional.of(author));
+        // Assuming saveAndFlush returns the saved prompt itself or a new instance based on it
         when(promptRepository.saveAndFlush(any(Prompt.class))).thenReturn(prompt);
-        // We can return a mock DTO or null, it doesn't matter for this test's assertions
-        when(promptMapper.toDto(any(Prompt.class), any(User.class))).thenReturn(mock(PromptDto.class));
+        when(promptMapper.toDto(eq(prompt), eq(author))).thenReturn(mockPromptDto);
 
 
         // Act
-        promptService.createPrompt(request, userDetails);
+        PromptDto resultDto = promptService.createPrompt(request, userDetails);
 
         // Assert
+        assertNotNull(resultDto);
+        assertSame(mockPromptDto, resultDto);
         verify(promptRepository, times(1)).saveAndFlush(any(Prompt.class));
-        verify(promptMapper, times(1)).toDto(any(Prompt.class), eq(author));
+        verify(promptMapper, times(1)).toDto(eq(prompt), eq(author));
     }
 
     @Test
     void updatePrompt_whenUserIsAuthor_shouldSucceed() {
         // Arrange
-        CreatePromptRequest request = new CreatePromptRequest("Updated Title", "Text", "Desc", "Model", "Category");
+        CreatePromptRequest request = new CreatePromptRequest("Updated Title", "Updated Text", "Updated Desc", "Updated Model", "Updated Category");
         when(userDetails.getUsername()).thenReturn("author");
         when(userRepository.findByUsername("author")).thenReturn(Optional.of(author));
-        when(promptRepository.findById(promptId)).thenReturn(Optional.of(prompt));
-        when(promptRepository.save(any(Prompt.class))).thenReturn(prompt);
+
+        // FIX: Mock the correct repository method used in PromptService#updatePrompt
+        when(promptRepository.findByIdWithAuthorAndTags(promptId)).thenReturn(Optional.of(prompt));
+
+        // Mock the save operation. It might return the same instance or a new one.
+        // If it's the same instance being modified and returned:
+        when(promptRepository.save(prompt)).thenReturn(prompt);
+        // If a new instance could be returned but is equivalent:
+        // when(promptRepository.save(any(Prompt.class))).thenReturn(prompt);
+
+        // Mock the mapper call as updatePrompt returns a PromptDto
+        when(promptMapper.toDto(eq(prompt), eq(author))).thenReturn(mockPromptDto);
 
         // Act
-        promptService.updatePrompt(promptId, request, userDetails);
+        PromptDto resultDto = promptService.updatePrompt(promptId, request, userDetails);
 
         // Assert
-        verify(promptRepository, times(1)).save(prompt);
+        assertNotNull(resultDto);
+        assertSame(mockPromptDto, resultDto, "The DTO returned by the mapper should be returned by the service");
+        verify(promptRepository, times(1)).save(prompt); // Verify save was called with the modified prompt
         assertEquals("Updated Title", prompt.getTitle());
+        assertEquals("Updated Text", prompt.getPromptText());
+        // Add more assertions for other updated fields if necessary
     }
 
     @Test
@@ -105,7 +128,10 @@ class PromptServiceTest {
         CreatePromptRequest request = new CreatePromptRequest("Updated Title", "Text", "Desc", "Model", "Category");
         when(userDetails.getUsername()).thenReturn("otherUser");
         when(userRepository.findByUsername("otherUser")).thenReturn(Optional.of(otherUser));
-        when(promptRepository.findById(promptId)).thenReturn(Optional.of(prompt));
+
+        // FIX: Mock the correct repository method used in PromptService#updatePrompt
+        when(promptRepository.findByIdWithAuthorAndTags(promptId)).thenReturn(Optional.of(prompt));
+        // Note: prompt is already set up with 'author' as its author in setUp()
 
         // Act & Assert
         AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
@@ -114,6 +140,7 @@ class PromptServiceTest {
 
         assertEquals("You do not have permission to edit this prompt.", exception.getMessage());
         verify(promptRepository, never()).save(any());
+        verify(promptMapper, never()).toDto(any(), any()); // Mapper should not be called
     }
 
     @Test
@@ -121,7 +148,9 @@ class PromptServiceTest {
         // Arrange
         when(userDetails.getUsername()).thenReturn("author");
         when(userRepository.findByUsername("author")).thenReturn(Optional.of(author));
+        // This mock is correct as PromptService#deletePrompt uses promptRepository.findById(promptId)
         when(promptRepository.findById(promptId)).thenReturn(Optional.of(prompt));
+        doNothing().when(promptRepository).delete(prompt); // For void methods
 
         // Act
         promptService.deletePrompt(promptId, userDetails);
@@ -135,13 +164,16 @@ class PromptServiceTest {
         // Arrange
         when(userDetails.getUsername()).thenReturn("otherUser");
         when(userRepository.findByUsername("otherUser")).thenReturn(Optional.of(otherUser));
+        // This mock is correct as PromptService#deletePrompt uses promptRepository.findById(promptId)
         when(promptRepository.findById(promptId)).thenReturn(Optional.of(prompt));
+        // Note: prompt is already set up with 'author' as its author in setUp()
 
         // Act & Assert
-        assertThrows(AccessDeniedException.class, () -> {
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
             promptService.deletePrompt(promptId, userDetails);
         });
 
+        assertEquals("You do not have permission to delete this prompt.", exception.getMessage());
         verify(promptRepository, never()).delete(any());
     }
 }
