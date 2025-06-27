@@ -1,4 +1,5 @@
 package com.promptdex.api.service;
+
 import com.promptdex.api.dto.CollectionDetailDto;
 import com.promptdex.api.dto.CollectionSummaryDto;
 import com.promptdex.api.dto.CreateCollectionRequest;
@@ -11,13 +12,15 @@ import com.promptdex.api.model.User;
 import com.promptdex.api.repository.CollectionRepository;
 import com.promptdex.api.repository.PromptRepository;
 import com.promptdex.api.repository.UserRepository;
-import org.springframework.security.access.AccessDeniedException; 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
 @Service
 @Transactional
 public class CollectionService {
@@ -25,12 +28,14 @@ public class CollectionService {
     private final UserRepository userRepository;
     private final PromptRepository promptRepository;
     private final PromptMapper promptMapper;
+
     public CollectionService(CollectionRepository collectionRepository, UserRepository userRepository, PromptRepository promptRepository, PromptMapper promptMapper) {
         this.collectionRepository = collectionRepository;
         this.userRepository = userRepository;
         this.promptRepository = promptRepository;
         this.promptMapper = promptMapper;
     }
+
     public List<CollectionSummaryDto> getCollectionsForUser(String username) {
         User user = findUserByUsername(username);
         List<Collection> collections = collectionRepository.findByOwner_UsernameOrderByNameAsc(user.getUsername());
@@ -44,6 +49,7 @@ public class CollectionService {
                 ))
                 .collect(Collectors.toList());
     }
+
     public CollectionDetailDto getCollectionById(UUID collectionId, String username) {
         User user = findUserByUsername(username);
         Collection collection = collectionRepository.findByIdWithPrompts(collectionId)
@@ -64,6 +70,7 @@ public class CollectionService {
                 promptDtos
         );
     }
+
     public CollectionSummaryDto createCollection(CreateCollectionRequest request, String username) {
         User user = findUserByUsername(username);
         if (collectionRepository.existsByNameAndOwner_Id(request.name(), user.getId())) {
@@ -75,10 +82,11 @@ public class CollectionService {
                 savedCollection.getId(),
                 savedCollection.getName(),
                 savedCollection.getDescription(),
-                0, 
+                0,
                 savedCollection.getCreatedAt()
         );
     }
+
     public CollectionDetailDto addPromptToCollection(UUID collectionId, UUID promptId, String username) {
         Collection collection = findCollectionByIdAndOwner(collectionId, username);
         Prompt prompt = promptRepository.findById(promptId)
@@ -87,6 +95,7 @@ public class CollectionService {
         collectionRepository.save(collection);
         return getCollectionById(collectionId, username);
     }
+
     public void removePromptFromCollection(UUID collectionId, UUID promptId, String username) {
         Collection collection = findCollectionByIdAndOwner(collectionId, username);
         Prompt prompt = promptRepository.findById(promptId)
@@ -94,6 +103,7 @@ public class CollectionService {
         collection.getPrompts().remove(prompt);
         collectionRepository.save(collection);
     }
+
     public CollectionSummaryDto updateCollection(UUID collectionId, CreateCollectionRequest request, String username) {
         Collection collection = findCollectionByIdAndOwner(collectionId, username);
         if (!collection.getName().equalsIgnoreCase(request.name()) &&
@@ -111,14 +121,17 @@ public class CollectionService {
                 updatedCollection.getCreatedAt()
         );
     }
+
     public void deleteCollection(UUID collectionId, String username) {
         Collection collection = findCollectionByIdAndOwner(collectionId, username);
         collectionRepository.delete(collection);
     }
+
     private User findUserByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
     }
+
     private Collection findCollectionByIdAndOwner(UUID collectionId, String username) {
         return collectionRepository.findByIdAndOwner_Username(collectionId, username)
                 .orElseThrow(() -> new ResourceNotFoundException("Collection not found with id: " + collectionId + " for user " + username));

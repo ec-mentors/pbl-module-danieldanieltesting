@@ -1,4 +1,5 @@
 package com.promptdex.api.service;
+
 import com.promptdex.api.dto.CreatePromptRequest;
 import com.promptdex.api.dto.PromptDto;
 import com.promptdex.api.exception.ResourceNotFoundException;
@@ -16,11 +17,13 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils; 
+import org.springframework.util.StringUtils;
+
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
 @Service
 @Transactional
 public class PromptService {
@@ -28,18 +31,21 @@ public class PromptService {
     private final UserRepository userRepository;
     private final TagService tagService;
     private final PromptMapper promptMapper;
+
     public PromptService(PromptRepository promptRepository, UserRepository userRepository, TagService tagService, PromptMapper promptMapper) {
         this.promptRepository = promptRepository;
         this.userRepository = userRepository;
         this.tagService = tagService;
         this.promptMapper = promptMapper;
     }
+
     private User getOptionalUser(UserDetails userDetails) {
         if (userDetails == null) {
             return null;
         }
         return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
     }
+
     private User getUserFromDetails(UserDetails userDetails) {
         if (userDetails == null) {
             throw new AccessDeniedException("Authentication is required to perform this action.");
@@ -47,6 +53,7 @@ public class PromptService {
         return userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("User " + userDetails.getUsername() + " not found in database."));
     }
+
     @Transactional(readOnly = true)
     public Page<PromptDto> searchAndPagePrompts(String searchTerm, List<String> tags, int page, int size, UserDetails userDetails) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -55,13 +62,15 @@ public class PromptService {
         User currentUser = getOptionalUser(userDetails);
         return promptPage.map(prompt -> promptMapper.toDto(prompt, currentUser));
     }
+
     @Transactional(readOnly = true)
     public PromptDto getPromptById(UUID promptId, UserDetails userDetails) {
-        Prompt prompt = promptRepository.findByIdWithAuthorAndTags(promptId) 
+        Prompt prompt = promptRepository.findByIdWithAuthorAndTags(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
         User currentUser = getOptionalUser(userDetails);
         return promptMapper.toDto(prompt, currentUser);
     }
+
     @Transactional
     public PromptDto createPrompt(CreatePromptRequest request, UserDetails userDetails) {
         User user = getUserFromDetails(userDetails);
@@ -75,6 +84,7 @@ public class PromptService {
         Prompt savedPrompt = promptRepository.saveAndFlush(prompt);
         return promptMapper.toDto(savedPrompt, user);
     }
+
     @Transactional
     public PromptDto updatePrompt(UUID promptId, CreatePromptRequest request, UserDetails userDetails) throws AccessDeniedException {
         User user = getUserFromDetails(userDetails);
@@ -91,6 +101,7 @@ public class PromptService {
         Prompt updatedPrompt = promptRepository.save(prompt);
         return promptMapper.toDto(updatedPrompt, user);
     }
+
     @Transactional
     public PromptDto updatePromptTags(UUID promptId, Set<String> tagNames, UserDetails userDetails) throws AccessDeniedException {
         User user = getUserFromDetails(userDetails);
@@ -104,6 +115,7 @@ public class PromptService {
         Prompt savedPrompt = promptRepository.save(prompt);
         return promptMapper.toDto(savedPrompt, user);
     }
+
     @Transactional
     public void deletePrompt(UUID promptId, UserDetails userDetails) throws AccessDeniedException {
         User user = getUserFromDetails(userDetails);
@@ -114,6 +126,7 @@ public class PromptService {
         }
         promptRepository.delete(prompt);
     }
+
     @Transactional
     public void addBookmark(UUID promptId, String username) {
         User user = userRepository.findByUsernameWithBookmarks(username)
@@ -122,6 +135,7 @@ public class PromptService {
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
         user.getBookmarkedPrompts().add(prompt);
     }
+
     @Transactional
     public void removeBookmark(UUID promptId, String username) {
         User user = userRepository.findByUsernameWithBookmarks(username)
@@ -130,6 +144,7 @@ public class PromptService {
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
         user.getBookmarkedPrompts().remove(prompt);
     }
+
     @Transactional(readOnly = true)
     public Page<PromptDto> getBookmarkedPrompts(String username, int page, int size) {
         User user = userRepository.findByUsername(username)
@@ -138,6 +153,7 @@ public class PromptService {
         Page<Prompt> promptPage = promptRepository.findByBookmarkedByUsers_Username(username, pageable);
         return promptPage.map(prompt -> promptMapper.toDto(prompt, user));
     }
+
     @Transactional(readOnly = true)
     public Page<PromptDto> getPromptsByAuthorUsername(String username, int page, int size, UserDetails userDetails) {
         userRepository.findByUsername(username)
@@ -147,6 +163,7 @@ public class PromptService {
         User currentUser = getOptionalUser(userDetails);
         return promptPage.map(prompt -> promptMapper.toDto(prompt, currentUser));
     }
+
     @Transactional(readOnly = true)
     public Page<PromptDto> getAllPromptsAsAdmin(String searchTerm, Pageable pageable, UserDetails principal) {
         Page<Prompt> promptsPage;
@@ -158,6 +175,7 @@ public class PromptService {
         User currentAdminUser = getOptionalUser(principal);
         return promptsPage.map(prompt -> promptMapper.toDto(prompt, currentAdminUser));
     }
+
     @Transactional
     public void deletePromptAsAdmin(UUID promptId) {
         Prompt promptToDelete = promptRepository.findById(promptId)

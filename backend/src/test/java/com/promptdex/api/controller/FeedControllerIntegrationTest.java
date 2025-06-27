@@ -1,4 +1,5 @@
 package com.promptdex.api.controller;
+
 import com.promptdex.api.model.AuthProvider;
 import com.promptdex.api.model.Prompt;
 import com.promptdex.api.model.User;
@@ -14,13 +15,16 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -33,11 +37,12 @@ public class FeedControllerIntegrationTest {
     private PromptRepository promptRepository;
     @MockitoBean
     private ClientRegistrationRepository clientRegistrationRepository;
-    private User userOne; 
-    private User userTwo; 
-    private User userThree; 
+    private User userOne;
+    private User userTwo;
+    private User userThree;
     private Prompt promptFromFollowedUser;
     private Prompt promptFromUnfollowedUser;
+
     @BeforeEach
     void setUp() {
         promptRepository.deleteAll();
@@ -62,6 +67,7 @@ public class FeedControllerIntegrationTest {
         promptFromUnfollowedUser = createPrompt("Prompt from Unfollowed User", userThree, Instant.now());
         promptRepository.saveAllAndFlush(List.of(promptFromFollowedUser, promptFromUnfollowedUser));
     }
+
     private Prompt createPrompt(String title, User author, Instant createdAt) {
         Prompt p = new Prompt();
         p.setTitle(title);
@@ -74,11 +80,13 @@ public class FeedControllerIntegrationTest {
         p.setUpdatedAt(createdAt);
         return p;
     }
+
     @Test
     void getUserFeed_withoutAuth_returnsUnauthorized() throws Exception {
         mockMvc.perform(get("/api/feed"))
                 .andExpect(status().isUnauthorized());
     }
+
     @Test
     @WithMockUser(username = "userOne")
     void getUserFeed_whenFollowingUsers_returnsOnlyFollowedUsersPrompts() throws Exception {
@@ -91,6 +99,7 @@ public class FeedControllerIntegrationTest {
                 .andExpect(jsonPath("$.content[0].prompt.title", is("Prompt from Followed User")))
                 .andExpect(jsonPath("$.content[0].eventType", is("NEW_PROMPT_FROM_FOLLOWING")));
     }
+
     @Test
     @WithMockUser(username = "userOne")
     void getUserFeed_whenFollowingNoOne_returnsEmptyPage() throws Exception {
@@ -99,6 +108,7 @@ public class FeedControllerIntegrationTest {
                 .andExpect(jsonPath("$.content", hasSize(0)))
                 .andExpect(jsonPath("$.totalElements", is(0)));
     }
+
     @Test
     @WithMockUser(username = "userOne")
     void getUserFeed_withPagination_returnsCorrectPage() throws Exception {
@@ -110,9 +120,9 @@ public class FeedControllerIntegrationTest {
         mockMvc.perform(get("/api/feed?page=0&size=1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)))
-                .andExpect(jsonPath("$.totalElements", is(3))) 
+                .andExpect(jsonPath("$.totalElements", is(3)))
                 .andExpect(jsonPath("$.totalPages", is(3)))
-                .andExpect(jsonPath("$.content[0].prompt.title", is("Newer Prompt"))); 
+                .andExpect(jsonPath("$.content[0].prompt.title", is("Newer Prompt")));
         mockMvc.perform(get("/api/feed?page=1&size=1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)))

@@ -1,19 +1,22 @@
 package com.promptdex.api.model;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*; 
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+
 import java.util.HashSet;
-import java.util.Set; 
+import java.util.Set;
 import java.util.UUID;
+
 @Data
 @NoArgsConstructor
 @Entity
 @Table(name = "users")
-@EqualsAndHashCode(exclude = {"bookmarkedPrompts", "collections", "following", "followers", "roles"}) 
-@ToString(exclude = {"bookmarkedPrompts", "collections", "following", "followers", "roles"})    
+@EqualsAndHashCode(exclude = {"bookmarkedPrompts", "collections", "following", "followers", "roles"})
+@ToString(exclude = {"bookmarkedPrompts", "collections", "following", "followers", "roles"})
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -23,7 +26,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
     @JsonIgnore
-    @Column(nullable = true) 
+    @Column(nullable = true)
     private String password;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "VARCHAR(255) DEFAULT 'LOCAL'")
@@ -53,12 +56,14 @@ public class User {
     private Set<User> followers = new HashSet<>();
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
-    @Column(name = "role_name", nullable = false) 
+    @Column(name = "role_name", nullable = false)
     private Set<String> roles = new HashSet<>();
+
     public void follow(User userToFollow) {
         this.following.add(userToFollow);
         userToFollow.getFollowers().add(this);
     }
+
     public void unfollow(User userToUnfollow) {
         this.following.remove(userToUnfollow);
         userToUnfollow.getFollowers().remove(this);

@@ -1,6 +1,7 @@
 package com.promptdex.api.service;
+
 import com.promptdex.api.dto.ActivityFeedItemDto;
-import com.promptdex.api.dto.PromptDto; 
+import com.promptdex.api.dto.PromptDto;
 import com.promptdex.api.mapper.PromptMapper;
 import com.promptdex.api.model.Prompt;
 import com.promptdex.api.model.User;
@@ -17,11 +18,14 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import java.util.*;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 @ExtendWith(MockitoExtension.class)
 public class FeedServiceTest {
     @Mock
@@ -37,6 +41,7 @@ public class FeedServiceTest {
     private User currentUser;
     private User followedUser1;
     private User followedUser2;
+
     @BeforeEach
     void setUp() {
         currentUser = new User();
@@ -53,6 +58,7 @@ public class FeedServiceTest {
         followingSet.add(followedUser2);
         currentUser.setFollowing(followingSet);
     }
+
     @Test
     void getFeedForUser_whenFollowingUsers_shouldReturnPageOfPrompts() {
         Pageable pageable = PageRequest.of(0, 10);
@@ -68,6 +74,7 @@ public class FeedServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(2);
     }
+
     @Test
     void getFeedForUser_whenFollowingNoOne_shouldReturnEmptyPage() {
         currentUser.setFollowing(new HashSet<>());

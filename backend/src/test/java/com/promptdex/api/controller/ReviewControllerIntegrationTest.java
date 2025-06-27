@@ -1,4 +1,5 @@
 package com.promptdex.api.controller;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.promptdex.api.model.AuthProvider;
 import com.promptdex.api.model.Prompt;
@@ -21,13 +22,16 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -53,6 +57,7 @@ public class ReviewControllerIntegrationTest {
     private User userOne;
     private User userTwo;
     private Prompt testPrompt;
+
     @BeforeEach
     void setUp() {
         reviewRepository.deleteAll();
@@ -79,12 +84,14 @@ public class ReviewControllerIntegrationTest {
         userOneToken = generateTokenForUser(userOne);
         userTwoToken = generateTokenForUser(userTwo);
     }
+
     private String generateTokenForUser(User user) {
         UserPrincipal userPrincipal = new UserPrincipal(user);
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 userPrincipal, null, userPrincipal.getAuthorities());
         return jwtTokenProvider.generateToken(authentication);
     }
+
     @Test
     void createReview_asDifferentUser_shouldSucceed() throws Exception {
         Map<String, Object> reviewRequest = new HashMap<>();
@@ -100,6 +107,7 @@ public class ReviewControllerIntegrationTest {
                 .andExpect(jsonPath("$.comment").value("This is a great prompt!"))
                 .andExpect(jsonPath("$.authorUsername").value("userOne"));
     }
+
     @Test
     void createReview_asAuthor_shouldFailWith403() throws Exception {
         Map<String, Object> reviewRequest = new HashMap<>();
@@ -112,8 +120,9 @@ public class ReviewControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(reviewRequest)))
                 .andExpect(status().isForbidden());
     }
+
     @Test
-    void createReview_whenAlreadyReviewed_shouldFailWith409() throws Exception { 
+    void createReview_whenAlreadyReviewed_shouldFailWith409() throws Exception {
         Map<String, Object> firstReviewRequest = new HashMap<>();
         firstReviewRequest.put("rating", 5);
         firstReviewRequest.put("comment", "My first review.");

@@ -1,4 +1,5 @@
 package com.promptdex.api.service;
+
 import com.promptdex.api.dto.CreatePromptRequest;
 import com.promptdex.api.dto.PromptDto;
 import com.promptdex.api.mapper.PromptMapper;
@@ -14,12 +15,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import java.util.Optional;
 import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq; 
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
 class PromptServiceTest {
     @Mock
@@ -27,7 +31,7 @@ class PromptServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private TagService tagService; 
+    private TagService tagService;
     @Mock
     private PromptMapper promptMapper;
     @Mock
@@ -38,7 +42,8 @@ class PromptServiceTest {
     private User otherUser;
     private Prompt prompt;
     private UUID promptId;
-    private PromptDto mockPromptDto; 
+    private PromptDto mockPromptDto;
+
     @BeforeEach
     void setUp() {
         promptId = UUID.randomUUID();
@@ -52,8 +57,9 @@ class PromptServiceTest {
         prompt.setId(promptId);
         prompt.setAuthor(author);
         prompt.setTitle("Original Title");
-        mockPromptDto = mock(PromptDto.class); 
+        mockPromptDto = mock(PromptDto.class);
     }
+
     @Test
     void createPrompt_shouldSucceed() {
         CreatePromptRequest request = new CreatePromptRequest("Title", "Text", "Desc", "Model", "Category");
@@ -67,6 +73,7 @@ class PromptServiceTest {
         verify(promptRepository, times(1)).saveAndFlush(any(Prompt.class));
         verify(promptMapper, times(1)).toDto(eq(prompt), eq(author));
     }
+
     @Test
     void updatePrompt_whenUserIsAuthor_shouldSucceed() {
         CreatePromptRequest request = new CreatePromptRequest("Updated Title", "Updated Text", "Updated Desc", "Updated Model", "Updated Category");
@@ -78,10 +85,11 @@ class PromptServiceTest {
         PromptDto resultDto = promptService.updatePrompt(promptId, request, userDetails);
         assertNotNull(resultDto);
         assertSame(mockPromptDto, resultDto, "The DTO returned by the mapper should be returned by the service");
-        verify(promptRepository, times(1)).save(prompt); 
+        verify(promptRepository, times(1)).save(prompt);
         assertEquals("Updated Title", prompt.getTitle());
         assertEquals("Updated Text", prompt.getPromptText());
     }
+
     @Test
     void updatePrompt_whenUserIsNotAuthor_shouldThrowAccessDeniedException() {
         CreatePromptRequest request = new CreatePromptRequest("Updated Title", "Text", "Desc", "Model", "Category");
@@ -93,17 +101,19 @@ class PromptServiceTest {
         });
         assertEquals("You do not have permission to edit this prompt.", exception.getMessage());
         verify(promptRepository, never()).save(any());
-        verify(promptMapper, never()).toDto(any(), any()); 
+        verify(promptMapper, never()).toDto(any(), any());
     }
+
     @Test
     void deletePrompt_whenUserIsAuthor_shouldSucceed() {
         when(userDetails.getUsername()).thenReturn("author");
         when(userRepository.findByUsername("author")).thenReturn(Optional.of(author));
         when(promptRepository.findById(promptId)).thenReturn(Optional.of(prompt));
-        doNothing().when(promptRepository).delete(prompt); 
+        doNothing().when(promptRepository).delete(prompt);
         promptService.deletePrompt(promptId, userDetails);
         verify(promptRepository, times(1)).delete(prompt);
     }
+
     @Test
     void deletePrompt_whenUserIsNotAuthor_shouldThrowAccessDeniedException() {
         when(userDetails.getUsername()).thenReturn("otherUser");
