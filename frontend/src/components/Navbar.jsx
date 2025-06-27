@@ -1,4 +1,3 @@
-// src/components/Navbar.jsx
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext.jsx';
@@ -42,7 +41,7 @@ const Navbar = () => {
                 {isAuthenticated && (
                   <>
                     <NavLink to="/bookmarks">My Bookmarks</NavLink>
-                    {/* --- NEW COLLECTIONS LINK --- */}
+                    {}
                     <NavLink to="/collections">My Collections</NavLink>
                   </>
                 )}
@@ -63,7 +62,7 @@ const Navbar = () => {
             )}
           </div>
           <div className="-mr-2 flex md:hidden">
-            {/* ... Mobile menu button SVG logic ... */}
+            {}
           </div>
         </div>
       </div>
@@ -75,7 +74,7 @@ const Navbar = () => {
             {isAuthenticated && (
               <>
                 <MobileNavLink to="/bookmarks" onClick={closeMobileMenu}>My Bookmarks</MobileNavLink>
-                {/* --- NEW COLLECTIONS LINK (MOBILE) --- */}
+                {}
                 <MobileNavLink to="/collections" onClick={closeMobileMenu}>My Collections</MobileNavLink>
               </>
             )}

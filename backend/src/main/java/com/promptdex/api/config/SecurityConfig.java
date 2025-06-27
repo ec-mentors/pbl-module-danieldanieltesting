@@ -1,5 +1,4 @@
 package com.promptdex.api.config;
-
 import com.promptdex.api.security.JwtAuthenticationFilter;
 import com.promptdex.api.security.oauth2.CustomOAuth2UserService;
 import com.promptdex.api.security.oauth2.CustomOidcUserService;
@@ -23,23 +22,18 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
 import java.util.Arrays;
 import java.util.List;
-
 import static org.springframework.security.config.Customizer.withDefaults;
-
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Enables @PreAuthorize, @PostAuthorize, etc. for method-level security
+@EnableMethodSecurity 
 public class SecurityConfig {
-
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomOidcUserService customOidcUserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
-
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           CustomOAuth2UserService customOAuth2UserService,
                           CustomOidcUserService customOidcUserService,
@@ -51,17 +45,14 @@ public class SecurityConfig {
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
         this.httpCookieOAuth2AuthorizationRequestRepository = httpCookieOAuth2AuthorizationRequestRepository;
     }
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -74,17 +65,10 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Public GET requests
                         .requestMatchers(HttpMethod.GET, "/api/prompts", "/api/prompts/**", "/api/tags", "/api/users/**").permitAll()
-                        // Authentication endpoints
                         .requestMatchers("/api/auth/**").permitAll()
-                        // OAuth2 flow
                         .requestMatchers("/oauth2/**", "/login/oauth2/code/*").permitAll()
-                        // --- MODIFICATION: Secure Admin Endpoints ---
-                        // This rule MUST come BEFORE .anyRequest().authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        // --- END MODIFICATION ---
-                        // All other requests require authentication
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
@@ -101,11 +85,9 @@ public class SecurityConfig {
                         )
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                 );
-
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -125,7 +107,6 @@ public class SecurityConfig {
         ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

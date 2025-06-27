@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import apiClient from '../services/apiClient';
 
-// Interface for PromptDto from backend (matches your PromptDto.java)
 interface PromptAdminView {
   id: string;
   title: string;
@@ -18,7 +17,6 @@ interface PromptAdminView {
   isBookmarked: boolean;
 }
 
-// Interface for Spring Data Page (generic)
 interface Page<T> {
   content: T[];
   pageable: {
@@ -40,7 +38,6 @@ interface Page<T> {
   empty: boolean;
 }
 
-// Debounce hook (can be moved to a shared hooks.ts file)
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -62,10 +59,8 @@ const PromptManagementPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
-  // --- SEARCH STATE ---
   const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearchTerm = useDebounce(searchTerm, 500); // 500ms debounce
-  // --- END SEARCH STATE ---
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [promptToDelete, setPromptToDelete] = useState<PromptAdminView | null>(null);
@@ -127,7 +122,7 @@ const PromptManagementPage: React.FC = () => {
       if (promptsPage && promptsPage.content.length === 1 && currentPage > 0) {
         setCurrentPage(currentPage - 1);
       } else {
-        fetchPrompts(debouncedSearchTerm); // Re-fetch with current search term
+        fetchPrompts(debouncedSearchTerm); 
       }
     } catch (err: any) {
       console.error('Failed to delete prompt:', err);
@@ -164,7 +159,7 @@ const PromptManagementPage: React.FC = () => {
     <div>
       <h2>Prompt Management</h2>
 
-      {/* --- SEARCH INPUT --- */}
+      {}
       <div style={{ marginBottom: '20px' }}>
         <input
           type="text"
@@ -174,7 +169,7 @@ const PromptManagementPage: React.FC = () => {
           style={searchInputStyle}
         />
       </div>
-      {/* --- END SEARCH INPUT --- */}
+      {}
 
       {loading && <p>Loading prompt list...</p>}
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
@@ -263,7 +258,6 @@ const PromptManagementPage: React.FC = () => {
   );
 };
 
-// Styles remain the same
 const tableHeaderStyle: React.CSSProperties = { padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd', fontSize: '0.9em' };
 const tableCellStyle: React.CSSProperties = { padding: '10px', textAlign: 'left', fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 const actionButtonStyle: React.CSSProperties = { padding: '5px 8px', marginRight: '5px', cursor: 'pointer', fontSize: '0.85em', border: 'none', borderRadius: '4px' };

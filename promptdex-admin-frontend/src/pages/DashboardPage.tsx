@@ -1,8 +1,6 @@
-// src/pages/DashboardPage.tsx
 import React, { useEffect, useState } from 'react';
-import apiClient from '../services/apiClient'; // Ensure apiClient is correctly imported
+import apiClient from '../services/apiClient';
 
-// Interface matching the backend StatsDto
 interface StatsData {
   totalUsers: number;
   totalPrompts: number;
@@ -30,9 +28,9 @@ const DashboardPage: React.FC = () => {
     };
 
     fetchStats();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
-  // Simple card style for displaying stats
+
   const statCardStyle: React.CSSProperties = {
     backgroundColor: '#fff',
     padding: '20px',
@@ -45,13 +43,13 @@ const DashboardPage: React.FC = () => {
   const statValueStyle: React.CSSProperties = {
     fontSize: '2em',
     fontWeight: 'bold',
-    color: '#007bff', // Primary color for value
+    color: '#007bff',
     margin: '0 0 5px 0',
   };
 
   const statLabelStyle: React.CSSProperties = {
     fontSize: '1em',
-    color: '#6c757d', // Muted color for label
+    color: '#6c757d',
     margin: '0',
   };
 
@@ -78,7 +76,7 @@ const DashboardPage: React.FC = () => {
             <p style={statValueStyle}>{stats.totalReviews}</p>
             <p style={statLabelStyle}>Total Reviews</p>
           </div>
-          {/* Add more stat cards here as needed */}
+          {}
         </div>
       )}
 

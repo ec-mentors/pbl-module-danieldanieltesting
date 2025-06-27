@@ -1,8 +1,6 @@
 package com.promptdex.api.dto;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-
 public record CreatePromptRequest(
         @NotBlank @Size(max = 255) String title,
         @NotBlank String text,

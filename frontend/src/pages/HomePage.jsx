@@ -6,7 +6,7 @@ import Spinner from '../components/Spinner';
 import PromptCard from '../components/PromptCard';
 
 const HomePage = () => {
-  // Use the authentication context to check if the user is logged in.
+
   const { isAuthenticated, user } = useContext(AuthContext);
 
   const [feedItems, setFeedItems] = useState([]);
@@ -18,7 +18,7 @@ const HomePage = () => {
 
   const PAGE_SIZE = 9;
 
-  // --- Data fetching function for the activity feed ---
+
   const fetchFeed = useCallback(async (isInitialLoad) => {
     const newPage = isInitialLoad ? 0 : page + 1;
     if (isInitialLoad) setLoading(true); else setLoadingMore(true);
@@ -28,7 +28,6 @@ const HomePage = () => {
         const response = await api.getFeed({ page: newPage, size: PAGE_SIZE });
         const { content, totalPages: newTotalPages } = response.data;
         
-        // The API returns feed items, we need to extract the prompt from each.
         const prompts = content.map(item => item.prompt);
         
         setFeedItems(prev => isInitialLoad ? prompts : [...prev, ...prompts]);
@@ -42,12 +41,12 @@ const HomePage = () => {
     }
   }, [page]);
 
-  // Fetch the feed only if the user is authenticated.
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchFeed(true);
     }
-  }, [isAuthenticated]); // This effect runs when the user logs in or out.
+  }, [isAuthenticated]); 
 
   const handleLoadMore = () => {
     if (!loadingMore) {
@@ -55,9 +54,6 @@ const HomePage = () => {
     }
   };
   
-  // --- Conditional Rendering ---
-  
-  // 1. If the user is not authenticated, show the public welcome page.
   if (!isAuthenticated) {
     return (
       <div className="text-center bg-white p-10 rounded-lg shadow-lg">
@@ -72,7 +68,6 @@ const HomePage = () => {
     );
   }
 
-  // 2. If the user is authenticated, show the feed.
   if (loading) {
     return <Spinner message="Loading your feed..." />;
   }

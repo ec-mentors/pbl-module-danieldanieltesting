@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './layouts/AdminLayout';
 import UserManagementPage from './pages/UserManagementPage';
 import PromptManagementPage from './pages/PromptManagementPage';
-import ReviewManagementPage from './pages/ReviewManagementPage'; // Import the new page
+import ReviewManagementPage from './pages/ReviewManagementPage'; 
 
 function App() {
   console.log("App.tsx: App function component executing");
@@ -17,7 +17,7 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/users" element={<UserManagementPage />} />
             <Route path="/prompts" element={<PromptManagementPage />} />
-            <Route path="/reviews" element={<ReviewManagementPage />} /> {/* <<<--- ADDED ROUTE FOR REVIEWS */}
+            <Route path="/reviews" element={<ReviewManagementPage />} /> {}
           </Route>
         </Route>
       </Routes>

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import apiClient from '../services/apiClient';
 
-// --- Interfaces (UserAdminView, Page) remain the same ---
 interface UserAdminView {
   id: string;
   username: string;
@@ -38,11 +37,11 @@ interface Page<T> {
   numberOfElements: number;
   empty: boolean;
 }
-// --- End of interfaces ---
+
 
 const ALL_AVAILABLE_ROLES = ['ROLE_USER', 'ROLE_ADMIN', 'ROLE_MODERATOR'];
 
-// Debounce hook
+
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -61,12 +60,12 @@ const UserManagementPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10); // Or your preferred default
+  const [pageSize, setPageSize] = useState(10); 
 
-  // --- SEARCH STATE ---
+
   const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearchTerm = useDebounce(searchTerm, 500); // 500ms debounce
-  // --- END SEARCH STATE ---
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<UserAdminView | null>(null);
@@ -93,22 +92,21 @@ const UserManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize]); // Removed debouncedSearchTerm from here, will handle its effect separately
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
-    // Reset to page 0 when search term changes, then fetch
-    // This effect handles changes to the debounced search term
-    if (debouncedSearchTerm !== undefined) { // Check if it's the initial undefined or actual term
-        setCurrentPage(0); // Reset to first page on new search
-        // fetchUsers will be called by the effect below due to currentPage change
+
+    if (debouncedSearchTerm !== undefined) { 
+        setCurrentPage(0); 
+      
     }
   }, [debouncedSearchTerm]);
 
 
   useEffect(() => {
-    // This effect handles fetching when currentPage, pageSize, or debouncedSearchTerm (indirectly via currentPage reset) changes
+  
     fetchUsers(debouncedSearchTerm);
-  }, [fetchUsers, debouncedSearchTerm, currentPage]); // Added currentPage here to refetch when it changes (e.g., after search term reset)
+  }, [fetchUsers, debouncedSearchTerm, currentPage]); 
 
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,7 +151,7 @@ const UserManagementPage: React.FC = () => {
         roles: Array.from(selectedRoles),
       });
       handleCloseModal();
-      fetchUsers(debouncedSearchTerm); // Re-fetch with current search term
+      fetchUsers(debouncedSearchTerm);
     } catch (err: any) {
       console.error('Failed to update roles:', err);
       setModalError(err.response?.data?.message || 'Failed to update roles.');
@@ -176,8 +174,8 @@ const UserManagementPage: React.FC = () => {
     border: '1px solid #ccc',
     borderRadius: '4px',
     marginRight: '10px',
-    width: '300px', // Adjust as needed
-    marginBottom: '20px', // Add some space below search bar
+    width: '300px',
+    marginBottom: '20px', 
   };
 
 
@@ -185,7 +183,7 @@ const UserManagementPage: React.FC = () => {
     <div>
       <h2>User Management</h2>
 
-      {/* --- SEARCH INPUT --- */}
+      {}
       <div style={{ marginBottom: '20px' }}>
         <input
           type="text"
@@ -195,7 +193,7 @@ const UserManagementPage: React.FC = () => {
           style={searchInputStyle}
         />
       </div>
-      {/* --- END SEARCH INPUT --- */}
+      {}
 
       {loading && <p>Loading user list...</p>}
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
@@ -203,7 +201,7 @@ const UserManagementPage: React.FC = () => {
 
       {usersPage && usersPage.content.length > 0 && (
         <>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0px' }}> {/* Removed marginTop from table as search bar has margin-bottom */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0px' }}> {}
             <thead>
               <tr style={{ backgroundColor: '#f2f2f2' }}>
                 <th style={tableHeaderStyle}>Username</th>
@@ -230,7 +228,7 @@ const UserManagementPage: React.FC = () => {
 
           <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-                {/* Optional: Show total results */}
+                {}
                 Total Users: {usersPage.totalElements}
             </div>
             <div>

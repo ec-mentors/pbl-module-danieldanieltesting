@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import * as api from '../services/api';
 import { toast } from 'react-toastify';
 import { FaTrash } from 'react-icons/fa';
-import TimeAgo from './TimeAgo'; // --- FIX: Import the new component
+import TimeAgo from './TimeAgo';
 
 const ReviewCard = ({ review, onReviewDeleted }) => {
   const { user } = useContext(AuthContext);
@@ -35,7 +35,7 @@ const ReviewCard = ({ review, onReviewDeleted }) => {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <p className="font-bold text-gray-800 text-lg truncate">{review.authorUsername}</p>
             <StarRating rating={review.rating} isEditable={false} />
-            {/* --- FIX: Use the TimeAgo component for a better user experience --- */}
+            {}
             <p className="text-sm text-gray-500">
               <TimeAgo dateString={review.createdAt} />
               {review.createdAt !== review.updatedAt && (
