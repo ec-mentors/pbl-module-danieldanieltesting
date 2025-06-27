@@ -1,7 +1,6 @@
-// src/pages/CollectionDetailPage.jsx
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import * as api from '../services/api'; // <--- THIS IS THE FIX (was apiService)
+import * as api from '../services/api'; 
 import { AuthContext } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import Spinner from '../components/Spinner';

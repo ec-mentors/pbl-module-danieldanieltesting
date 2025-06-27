@@ -28,20 +28,19 @@ const AddToCollectionModal = ({ isOpen, onClose, promptId, promptTitle }) => {
     }
   }, [isOpen, fetchCollections]);
 
-  // --- FIXED METHOD ---
+
   const handleAddToCollection = async (collectionId) => {
     try {
-      // The API now returns the updated collection object.
+
       const response = await api.addPromptToCollection(collectionId, promptId);
-      const updatedCollection = response.data; // Get the returned DTO
+      const updatedCollection = response.data; 
       toast.success(`'${promptTitle}' added to '${updatedCollection.name}'!`);
-      onClose(); // Close the modal on success
+      onClose(); 
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to add prompt to collection.");
     }
   };
 
-  // --- FIXED METHOD ---
   const handleCreateAndAdd = async (e) => {
       e.preventDefault();
       if (!newCollectionName.trim()) {
@@ -49,14 +48,11 @@ const AddToCollectionModal = ({ isOpen, onClose, promptId, promptTitle }) => {
           return;
       }
       try {
-          // Step 1: Create the collection
           const createResponse = await api.createCollection({ name: newCollectionName, description: '' });
           const newCollection = createResponse.data;
 
-          // Step 2: Call our robust handler to add the prompt. It will show the toast and close the modal.
           await handleAddToCollection(newCollection.id);
           
-          // Reset local state after the flow is complete
           setIsCreating(false);
           setNewCollectionName('');
       } catch (error) {

@@ -1,4 +1,3 @@
-// src/pages/LoginPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -11,11 +10,11 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // --- MODIFICATION: Select store values individually ---
+
   const setAuthInStore = useAuthStore((state) => state.setAuth);
   const isAdminInStore = useAuthStore((state) => state.isAdmin);
   const tokenInStore = useAuthStore((state) => state.token);
-  // --- END MODIFICATION ---
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

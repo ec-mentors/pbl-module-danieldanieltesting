@@ -58,8 +58,6 @@ const UserProfilePage = () => {
 
         setLoadingMore(true);
         try {
-            // --- THE FIX IS HERE ---
-            // We pass the parameters object directly, without wrapping it in another `params` object.
             const response = await api.getPromptsByUsername(username, { 
                 page: page + 1, 
                 size: PAGE_SIZE 

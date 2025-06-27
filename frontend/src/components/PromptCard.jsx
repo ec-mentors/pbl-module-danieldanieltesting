@@ -33,13 +33,11 @@ const PromptCard = ({ prompt }) => {
   const { isAuthenticated } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // --- NEW: Navigation handlers ---
   const handleCardClick = () => {
     navigate(`/prompts/${prompt.id}`);
   };
 
   const handleInnerClick = (e) => {
-    // This stops the click from bubbling up to the parent div's onClick handler
     e.stopPropagation();
   };
   
@@ -49,7 +47,6 @@ const PromptCard = ({ prompt }) => {
   };
 
   return (
-    // The main div is now the primary clickable element
     <div 
       className="relative flex flex-col p-6 bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow duration-300 h-full cursor-pointer"
       onClick={handleCardClick}
@@ -63,7 +60,7 @@ const PromptCard = ({ prompt }) => {
         </div>
       )}
       
-      {/* The content is no longer wrapped in a Link */}
+      {}
       <div className="flex flex-col flex-grow">
         <div className="flex-grow">
           {prompt.tags && prompt.tags.length > 0 && (
@@ -74,7 +71,7 @@ const PromptCard = ({ prompt }) => {
             </div>
           )}
 
-          {/* The title itself is now a Link */}
+          {}
           <h5 className="mb-2 text-xl font-bold tracking-tight text-gray-900 break-words">
             <Link to={`/prompts/${prompt.id}`} onClick={handleInnerClick} className="hover:text-blue-700 transition-colors static-link">
               {prompt.title}

@@ -1,4 +1,3 @@
-// src/pages/UserCollectionsPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import * as api from '../services/api';
 import { Link } from 'react-router-dom';
@@ -113,5 +112,4 @@ const UserCollectionsPage = () => {
   );
 };
 
-// --- THIS IS THE FIX ---
 export default UserCollectionsPage;

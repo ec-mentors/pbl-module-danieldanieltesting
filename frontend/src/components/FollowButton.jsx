@@ -33,13 +33,10 @@ const FollowButton = ({ targetUsername, isFollowed, onUpdate }) => {
         ? await api.unfollowUser(targetUsername)
         : await api.followUser(targetUsername);
 
-      // Notify the parent component with the fresh data from the API.
-      // The parent will then update its state and pass the new `isFollowed` prop back down.
       if (onUpdate) {
         onUpdate(response.data);
       }
       
-      // Toast messages are fine to keep here.
       if (response.data.isFollowedByCurrentUser) {
         toast.success(`You are now following ${targetUsername}!`);
       } else {
@@ -53,7 +50,6 @@ const FollowButton = ({ targetUsername, isFollowed, onUpdate }) => {
     }
   };
 
-  // The button's appearance is now derived directly from the `isFollowed` prop.
   let buttonText = 'Follow';
   let buttonIcon = <FaUserPlus />;
   let buttonClasses = 'bg-blue-600 hover:bg-blue-700 text-white';

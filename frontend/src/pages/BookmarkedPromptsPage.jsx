@@ -36,7 +36,7 @@ const BookmarkedPromptsPage = () => {
 
     useEffect(() => {
         fetchBookmarks(true);
-    }, []); // Run only on initial mount
+    }, []);
 
     const handleLoadMore = () => {
         if (!loadingMore) {

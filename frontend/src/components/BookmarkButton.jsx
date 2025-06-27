@@ -7,7 +7,6 @@ const BookmarkButton = ({ promptId, initialIsBookmarked }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleToggleBookmark = async (e) => {
-    // Prevent the parent Link/div click event from firing, which would navigate away.
     e.preventDefault(); 
     e.stopPropagation();
     
@@ -15,12 +14,10 @@ const BookmarkButton = ({ promptId, initialIsBookmarked }) => {
 
     try {
       if (isBookmarked) {
-        // --- If already bookmarked, send DELETE request to remove it ---
         await api.delete(`/prompts/${promptId}/bookmark`);
         setIsBookmarked(false);
         toast.info('Bookmark removed');
       } else {
-        // --- If not bookmarked, send POST request to add it ---
         await api.post(`/prompts/${promptId}/bookmark`);
         setIsBookmarked(true);
         toast.success('Bookmark added!');
@@ -41,8 +38,8 @@ const BookmarkButton = ({ promptId, initialIsBookmarked }) => {
 
   const iconClasses = `w-6 h-6 ${
     isBookmarked
-      ? 'fill-current text-blue-600' // Filled icon when bookmarked
-      : 'stroke-current text-gray-500 hover:text-blue-600' // Outline icon when not
+      ? 'fill-current text-blue-600' 
+      : 'stroke-current text-gray-500 hover:text-blue-600' 
   }`;
   
   return (
