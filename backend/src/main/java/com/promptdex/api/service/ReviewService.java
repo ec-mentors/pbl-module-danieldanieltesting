@@ -1,5 +1,4 @@
 package com.promptdex.api.service;
-
 import com.promptdex.api.dto.CreateReviewRequest;
 import com.promptdex.api.dto.ReviewAdminViewDto;
 import com.promptdex.api.dto.ReviewDto;
@@ -18,29 +17,23 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils; // Import StringUtils
-
+import org.springframework.util.StringUtils; 
 import java.util.UUID;
-
 @Service
 @Transactional
 public class ReviewService {
-
     private final ReviewRepository reviewRepository;
     private final PromptRepository promptRepository;
     private final UserRepository userRepository;
-
     public ReviewService(ReviewRepository reviewRepository, PromptRepository promptRepository, UserRepository userRepository) {
         this.reviewRepository = reviewRepository;
         this.promptRepository = promptRepository;
         this.userRepository = userRepository;
     }
-
     private User getUserFromDetails(UserDetails userDetails) {
         return userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + userDetails.getUsername()));
     }
-
     private void updatePromptAverageRating(UUID promptId) {
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId + " while updating average rating."));
@@ -48,7 +41,6 @@ public class ReviewService {
         prompt.setAverageRating(averageRating);
         promptRepository.save(prompt);
     }
-
     public ReviewDto createReview(UUID promptId, CreateReviewRequest request, UserDetails currentUser) {
         Prompt prompt = promptRepository.findById(promptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prompt not found with id: " + promptId));
@@ -68,7 +60,6 @@ public class ReviewService {
         updatePromptAverageRating(promptId);
         return new ReviewDto(savedReview.getId(), savedReview.getRating(), savedReview.getComment(), savedReview.getUser().getUsername(), savedReview.getCreatedAt(), savedReview.getUpdatedAt());
     }
-
     public ReviewDto updateReview(UUID reviewId, UpdateReviewRequest request, UserDetails currentUser) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id: " + reviewId));
@@ -82,7 +73,6 @@ public class ReviewService {
         updatePromptAverageRating(updatedReview.getPrompt().getId());
         return new ReviewDto(updatedReview.getId(), updatedReview.getRating(), updatedReview.getComment(), updatedReview.getUser().getUsername(), updatedReview.getCreatedAt(), updatedReview.getUpdatedAt());
     }
-
     public void deleteReview(UUID reviewId, UserDetails currentUser) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id: " + reviewId));
@@ -94,15 +84,6 @@ public class ReviewService {
         reviewRepository.delete(review);
         updatePromptAverageRating(promptId);
     }
-
-    // --- UPDATED ADMIN METHOD ---
-    /**
-     * Retrieves all reviews paginated for an admin user, optionally filtered by a search term.
-     *
-     * @param searchTerm Optional term to search by review comment, author username, or prompt title.
-     * @param pageable   Pagination information.
-     * @return A Page of {@link ReviewAdminViewDto}.
-     */
     @Transactional(readOnly = true)
     public Page<ReviewAdminViewDto> getAllReviewsAsAdmin(String searchTerm, Pageable pageable) {
         Page<Review> reviewsPage;
@@ -122,7 +103,6 @@ public class ReviewService {
                 review.getUpdatedAt()
         ));
     }
-
     @Transactional
     public void deleteReviewAsAdmin(UUID reviewId) {
         Review review = reviewRepository.findById(reviewId)
@@ -131,5 +111,4 @@ public class ReviewService {
         reviewRepository.delete(review);
         updatePromptAverageRating(promptId);
     }
-    // --- END ADMIN METHODS ---
 }

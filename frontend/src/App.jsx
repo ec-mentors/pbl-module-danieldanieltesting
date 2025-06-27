@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -18,7 +17,7 @@ import UserProfilePage from './pages/UserProfilePage.jsx';
 import BookmarkedPromptsPage from './pages/BookmarkedPromptsPage.jsx';
 import OAuth2RedirectHandler from './pages/OAuth2RedirectHandler.jsx';
 
-// --- NEW PAGE IMPORTS ---
+
 import UserCollectionsPage from './pages/UserCollectionsPage.jsx';
 import CollectionDetailPage from './pages/CollectionDetailPage.jsx';
 

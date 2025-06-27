@@ -1,4 +1,3 @@
-// src/components/StarRating.jsx
 import React, { useState } from 'react';
 
 const Star = ({ filled, onClick, onMouseEnter, onMouseLeave, isEditable }) => (
@@ -6,8 +5,7 @@ const Star = ({ filled, onClick, onMouseEnter, onMouseLeave, isEditable }) => (
     onClick={onClick}
     onMouseEnter={onMouseEnter}
     onMouseLeave={onMouseLeave}
-    style={{ width: '1.25rem', height: '1.25rem' }} // Fixed size of 20px.
-    // --- FIX: Make cursor a pointer only when editable ---
+    style={{ width: '1.25rem', height: '1.25rem' }}
     className={isEditable ? 'cursor-pointer flex-shrink-0' : 'flex-shrink-0'}
   >
     <svg
@@ -21,26 +19,22 @@ const Star = ({ filled, onClick, onMouseEnter, onMouseLeave, isEditable }) => (
   </div>
 );
 
-// --- FIX: Add `isEditable` prop, defaulting to true ---
 const StarRating = ({ rating, onRatingChange, isEditable = true }) => {
   const [hoverRating, setHoverRating] = useState(0);
 
   const handleClick = (index) => {
-    // Only allow changes if editable
     if (isEditable && onRatingChange) {
       onRatingChange(index);
     }
   };
 
   const handleMouseEnter = (index) => {
-    // Only allow hover effects if editable
     if (isEditable) {
       setHoverRating(index);
     }
   };
 
   const handleMouseLeave = () => {
-    // Only allow hover effects if editable
     if (isEditable) {
       setHoverRating(0);
     }
@@ -51,7 +45,6 @@ const StarRating = ({ rating, onRatingChange, isEditable = true }) => {
       {[1, 2, 3, 4, 5].map((index) => (
         <Star
           key={index}
-          // --- FIX: When not editable, hoverRating is ignored ---
           filled={(isEditable ? (hoverRating || rating) : rating) >= index}
           onClick={() => handleClick(index)}
           onMouseEnter={() => handleMouseEnter(index)}

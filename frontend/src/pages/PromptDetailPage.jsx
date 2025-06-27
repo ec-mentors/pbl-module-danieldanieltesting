@@ -11,7 +11,7 @@ import { FaPlusCircle, FaUser, FaTag, FaRobot, FaCalendarAlt } from 'react-icons
 import ReviewCard from '../components/ReviewCard';
 import CreateReviewForm from '../components/CreateReviewForm';
 import StarRating from '../components/StarRating';
-import TimeAgo from '../components/TimeAgo'; // --- FIX: Import the new component
+import TimeAgo from '../components/TimeAgo'; 
 
 const PromptDetailPage = () => {
   const [prompt, setPrompt] = useState(null);
@@ -64,7 +64,7 @@ const PromptDetailPage = () => {
     }
   };
 
-  // --- FIX: The formatDate function is no longer needed. ---
+
 
   if (loading) return <Spinner />;
   if (!prompt) return <div className="text-center mt-20">Prompt not found.</div>;
@@ -81,7 +81,7 @@ const PromptDetailPage = () => {
       
       <div className="max-w-4xl mx-auto p-4 md:p-8">
         <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 md:p-8 mb-8">
-          {/* Header */}
+          {}
           <div className="flex flex-col md:flex-row justify-between md:items-start mb-6 gap-4">
             <div className="flex-grow">
               <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 break-words">{prompt.title}</h1>
@@ -92,7 +92,7 @@ const PromptDetailPage = () => {
                 </Link>
                 <span className="mx-2">•</span>
                 <FaCalendarAlt className="mr-2" />
-                {/* --- FIX: Use the TimeAgo component --- */}
+                {}
                 <TimeAgo dateString={prompt.createdAt} />
                 {wasEdited && <em className="ml-2">(edited <TimeAgo dateString={prompt.updatedAt} />)</em>}
               </div>
@@ -107,7 +107,7 @@ const PromptDetailPage = () => {
             </div>
           </div>
           
-          {/* Tags */}
+          {}
           {prompt.tags && prompt.tags.length > 0 && (
             <div className="mb-6 flex flex-wrap items-center gap-2">
                 <FaTag className="text-gray-400" />
@@ -119,7 +119,7 @@ const PromptDetailPage = () => {
             </div>
           )}
 
-          {/* Metadata Grid */}
+          {}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 p-4 bg-gray-50 rounded-lg border">
             <div className="flex items-center gap-3">
                 <FaRobot size={24} className="text-blue-500"/>
@@ -144,12 +144,12 @@ const PromptDetailPage = () => {
             </div>
           </div>
 
-          {/* Description and Prompt Text */}
+          {}
           <div className="mb-8"><h3 className="font-bold text-gray-800 text-lg mb-2">Description</h3><p className="text-gray-700">{prompt.description}</p></div>
           <div><h2 className="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Full Prompt Text</h2><pre className="text-gray-700 whitespace-pre-wrap font-sans bg-gray-100 p-4 rounded-md">{prompt.text}</pre></div>
         </div>
 
-        {/* --- REVIEWS SECTION --- */}
+        {}
         <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 md:p-8">
           <h2 className="text-2xl font-semibold mb-4">Community Reviews</h2>
           {canUserReview && <CreateReviewForm promptId={promptId} onReviewSubmitted={onReviewSubmitted} />}

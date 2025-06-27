@@ -21,7 +21,6 @@ const PromptsListPage = () => {
 
   const [availableTags, setAvailableTags] = useState([]);
 
-  // --- FIX: USE useMemo TO PREVENT RE-CREATING THE ARRAY ON EVERY RENDER ---
   const selectedTags = useMemo(() => {
     if (!tagParams) return [];
     return tagParams.split(',').map(tag => ({ value: tag, label: tag }));
@@ -65,10 +64,9 @@ const PromptsListPage = () => {
     } finally {
       if (isNewSearch) setLoading(false); else setLoadingMore(false);
     }
-  }, [debouncedSearchTerm, page, selectedTags]); // selectedTags is now stable
+  }, [debouncedSearchTerm, page, selectedTags]); 
 
   useEffect(() => {
-    // This effect now correctly runs only when search term or tags actually change.
     fetchPrompts(true);
   }, [debouncedSearchTerm, selectedTags]);
 

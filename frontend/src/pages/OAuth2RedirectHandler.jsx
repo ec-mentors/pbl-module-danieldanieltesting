@@ -20,13 +20,11 @@ const OAuth2RedirectHandler = () => {
       toast.error(`Login failed: ${error}`);
       navigate('/login');
     } else {
-      // Should not happen, but handle it just in case
       toast.error('An unknown error occurred during login.');
       navigate('/login');
     }
   }, [searchParams, navigate, loginWithToken]);
 
-  // Display a loading spinner while the redirect is being processed
   return <Spinner message="Finalizing login..." />;
 };
 

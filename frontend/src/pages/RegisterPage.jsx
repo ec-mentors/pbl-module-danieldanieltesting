@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext.jsx';
 import { toast } from 'react-toastify';
-import { GoogleIcon, GithubIcon } from '../components/icons'; // Assuming you'll create these simple SVG icons
+import { GoogleIcon, GithubIcon } from '../components/icons';
 
 const RegisterPage = () => {
   const [username, setUsername] = useState('');
@@ -39,7 +39,7 @@ const RegisterPage = () => {
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h1 className="text-3xl font-bold text-center mb-6">Create an Account</h1>
       
-      {/* --- SOCIAL LOGIN BUTTONS --- */}
+      {}
       <div className="flex flex-col space-y-3 mb-6">
         <a href={GOOGLE_AUTH_URL} className="flex items-center justify-center w-full bg-white border border-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-md hover:bg-gray-50">
           <GoogleIcon className="w-5 h-5 mr-2" /> Sign up with Google
@@ -55,7 +55,7 @@ const RegisterPage = () => {
         <div className="flex-grow border-t border-gray-300"></div>
       </div>
 
-      {/* --- LOCAL REGISTRATION FORM --- */}
+      {}
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">Email Address</label>

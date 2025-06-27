@@ -55,7 +55,6 @@ const AuthProvider = ({ children }) => {
     }
   };
   
-  // --- NEW FUNCTION FOR OAUTH2 REDIRECT ---
   const loginWithToken = (token) => {
     return setAuthData(token);
   };
@@ -85,7 +84,7 @@ const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    loginWithToken, // --- EXPORT THE NEW FUNCTION ---
+    loginWithToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

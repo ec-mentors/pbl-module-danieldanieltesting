@@ -10,13 +10,12 @@ const CreatePromptPage = () => {
   const [description, setDescription] = useState('');
   const [model, setModel] = useState('');
   const [category, setCategory] = useState('');
-  const [tags, setTags] = useState([]); // State for selected tags
-  const [tagOptions, setTagOptions] = useState([]); // State for available tag options
+  const [tags, setTags] = useState([]);
+  const [tagOptions, setTagOptions] = useState([]); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Fetch existing tags to suggest to the user
   useEffect(() => {
     const fetchTags = async () => {
       try {
@@ -25,7 +24,6 @@ const CreatePromptPage = () => {
         setTagOptions(options);
       } catch (err) {
         console.error("Failed to fetch tags", err);
-        // Not a critical error, so we don't block the form
       }
     };
     fetchTags();
@@ -42,12 +40,10 @@ const CreatePromptPage = () => {
 
     setLoading(true);
     try {
-      // Step 1: Create the prompt with its core data
       const promptData = { title, text, description, model, category };
       const response = await createPrompt(promptData);
       const newPrompt = response.data;
 
-      // Step 2: If there are tags, update the newly created prompt with them
       if (tags && tags.length > 0) {
         const tagNames = tags.map(tag => tag.value);
         await updatePromptTags(newPrompt.id, tagNames);
@@ -70,7 +66,7 @@ const CreatePromptPage = () => {
       <h1 className="text-3xl font-bold text-center mb-6">Create a New Prompt</h1>
       
       <form onSubmit={handleSubmit} noValidate>
-        {/* ... Title, Description, Category, Model fields are unchanged ... */}
+        {}
         <div className="mb-4">
           <label htmlFor="title" className="block text-gray-700 text-sm font-bold mb-2">Title</label>
           <input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 border rounded-md" />
@@ -90,7 +86,7 @@ const CreatePromptPage = () => {
           </div>
         </div>
 
-        {/* --- NEW TAGS FIELD --- */}
+        {}
         <div className="mb-4">
           <label htmlFor="tags" className="block text-gray-700 text-sm font-bold mb-2">Tags</label>
           <CreatableSelect

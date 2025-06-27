@@ -1,8 +1,7 @@
-// src/components/CreateReviewForm.jsx
 import React, { useState } from 'react';
-import * as api from '../services/api'; // Use named import
+import * as api from '../services/api'; 
 import { toast } from 'react-toastify';
-import StarRating from './StarRating'; // Use your StarRating component
+import StarRating from './StarRating'; 
 
 const CreateReviewForm = ({ promptId, onReviewSubmitted }) => {
   const [rating, setRating] = useState(0);
@@ -22,14 +21,12 @@ const CreateReviewForm = ({ promptId, onReviewSubmitted }) => {
 
     setIsSubmitting(true);
     try {
-      // The API call now only needs rating and comment in the body
       const reviewData = { rating, comment };
       const response = await api.createReview(promptId, reviewData);
       
       toast.success('Review submitted successfully!');
-      // Pass the complete new review object back to the parent
+
       onReviewSubmitted(response.data); 
-      // Reset form
       setRating(0);
       setComment('');
     } catch (error) {
@@ -45,7 +42,7 @@ const CreateReviewForm = ({ promptId, onReviewSubmitted }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Your Rating</label>
-          {/* Use the visual StarRating component for input */}
+          {}
           <StarRating rating={rating} onRatingChange={setRating} />
         </div>
         <div>

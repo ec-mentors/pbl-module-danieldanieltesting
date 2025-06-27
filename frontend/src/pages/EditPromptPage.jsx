@@ -21,7 +21,6 @@ const EditPromptPage = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        // Fetch prompt data and available tags in parallel
         const [promptResponse, tagsResponse] = await Promise.all([
           api.get(`/prompts/${id}`),
           getTags()
@@ -62,7 +61,6 @@ const EditPromptPage = () => {
       const promptData = { title, text, description, model, category };
       const tagNames = tags.map(tag => tag.value);
 
-      // Update core details and tags in parallel
       await Promise.all([
         updatePrompt(id, promptData),
         updatePromptTags(id, tagNames)
@@ -87,7 +85,7 @@ const EditPromptPage = () => {
     <div className="max-w-2xl mx-auto mt-10 p-4 md:p-8 bg-white rounded-lg shadow-md">
       <h1 className="text-3xl font-bold text-center mb-6">Edit Prompt</h1>
       <form onSubmit={handleSubmit} noValidate>
-        {/* ... Title, Description, Category, Model fields are unchanged ... */}
+        {}
         <div className="mb-4">
           <label htmlFor="title" className="block text-gray-700 text-sm font-bold mb-2">Title</label>
           <input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 border rounded-md" />
@@ -107,7 +105,7 @@ const EditPromptPage = () => {
           </div>
         </div>
 
-        {/* --- TAGS FIELD --- */}
+        {}
         <div className="mb-4">
           <label htmlFor="tags" className="block text-gray-700 text-sm font-bold mb-2">Tags</label>
           <CreatableSelect
