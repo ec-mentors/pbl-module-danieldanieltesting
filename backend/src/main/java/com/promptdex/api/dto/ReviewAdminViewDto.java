@@ -1,6 +1,8 @@
 package com.promptdex.api.dto;
+
 import java.time.Instant;
 import java.util.UUID;
+
 public record ReviewAdminViewDto(
         UUID id,
         int rating,
@@ -10,4 +12,5 @@ public record ReviewAdminViewDto(
         String promptTitle,
         Instant createdAt,
         Instant updatedAt
-) {}
+) {
+}

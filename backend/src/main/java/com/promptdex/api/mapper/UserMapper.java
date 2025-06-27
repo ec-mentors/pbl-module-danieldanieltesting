@@ -1,7 +1,9 @@
 package com.promptdex.api.mapper;
+
 import com.promptdex.api.dto.ProfileDto;
 import com.promptdex.api.model.User;
 import org.springframework.stereotype.Component;
+
 @Component
 public class UserMapper {
     public ProfileDto toProfileDto(User targetUser, User currentUser) {

@@ -1,4 +1,5 @@
 package com.promptdex.api.controller;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.promptdex.api.dto.LoginRequest;
 import com.promptdex.api.dto.RegisterRequest;
@@ -18,11 +19,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -39,6 +42,7 @@ public class AuthControllerIntegrationTest {
     private JwtTokenProvider tokenProvider;
     @MockitoBean
     private ClientRegistrationRepository clientRegistrationRepository;
+
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
@@ -49,6 +53,7 @@ public class AuthControllerIntegrationTest {
         existingUser.setProvider(AuthProvider.LOCAL);
         userRepository.saveAndFlush(existingUser);
     }
+
     @Test
     void registerUser_withValidData_returnsCreated() throws Exception {
         RegisterRequest request = new RegisterRequest();
@@ -63,10 +68,11 @@ public class AuthControllerIntegrationTest {
                 .andExpect(content().string("\"User registered successfully!\""));
         assertThat(userRepository.findByUsername("newuser")).isPresent();
     }
+
     @Test
     void registerUser_withDuplicateUsername_returnsBadRequest() throws Exception {
         RegisterRequest request = new RegisterRequest();
-        request.setUsername("testuser"); 
+        request.setUsername("testuser");
         request.setEmail("anotheremail@example.com");
         request.setPassword("password123");
         mockMvc.perform(post("/api/auth/register")
@@ -76,11 +82,12 @@ public class AuthControllerIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", is("Error: Username is already taken!")));
     }
+
     @Test
     void registerUser_withDuplicateEmail_returnsBadRequest() throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("anotheruser");
-        request.setEmail("testuser@example.com"); 
+        request.setEmail("testuser@example.com");
         request.setPassword("password123");
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
@@ -89,6 +96,7 @@ public class AuthControllerIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", is("Error: Email is already in use!")));
     }
+
     @Test
     void loginUser_withValidCredentials_returnsOkWithToken() throws Exception {
         LoginRequest request = new LoginRequest("testuser", "password123");
@@ -105,6 +113,7 @@ public class AuthControllerIntegrationTest {
         assertThat(tokenProvider.validateToken(token)).isTrue();
         assertThat(tokenProvider.getUsernameFromJWT(token)).isEqualTo("testuser");
     }
+
     @Test
     void loginUser_withInvalidPassword_returnsUnauthorized() throws Exception {
         LoginRequest request = new LoginRequest("testuser", "wrongpassword");
@@ -115,6 +124,7 @@ public class AuthControllerIntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("Invalid username or password")));
     }
+
     @Test
     void loginUser_withNonExistentUser_returnsUnauthorized() throws Exception {
         LoginRequest request = new LoginRequest("nonexistent", "password123");

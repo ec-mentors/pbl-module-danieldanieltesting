@@ -1,4 +1,5 @@
 package com.promptdex.api.controller;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.promptdex.api.dto.CreateCollectionRequest;
 import com.promptdex.api.model.AuthProvider;
@@ -19,11 +20,14 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
+
 import static org.hamcrest.Matchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -44,6 +48,7 @@ public class CollectionControllerIntegrationTest {
     private User userTwo;
     private Prompt promptOne;
     private Collection collectionOne;
+
     @BeforeEach
     void setUp() {
         collectionRepository.deleteAll();
@@ -71,6 +76,7 @@ public class CollectionControllerIntegrationTest {
         collectionOne = new Collection("My Favorite Prompts", "A collection of great prompts.", userOne);
         collectionRepository.saveAndFlush(collectionOne);
     }
+
     @Test
     @WithMockUser(username = "userOne")
     void createCollection_withValidData_returnsCreated() throws Exception {
@@ -83,6 +89,7 @@ public class CollectionControllerIntegrationTest {
                 .andExpect(jsonPath("$.name", is("New Test Collection")))
                 .andExpect(jsonPath("$.promptCount", is(0)));
     }
+
     @Test
     @WithMockUser(username = "userOne")
     void createCollection_whenNameAlreadyExistsForUser_returnsConflict() throws Exception {
@@ -93,6 +100,7 @@ public class CollectionControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict());
     }
+
     @Test
     void createCollection_withoutAuth_returnsUnauthorized() throws Exception {
         CreateCollectionRequest request = new CreateCollectionRequest("Unauthorized Collection", "A description.");
@@ -102,6 +110,7 @@ public class CollectionControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
     }
+
     @Test
     @WithMockUser(username = "userOne")
     void getMyCollections_returnsUserCollections() throws Exception {
@@ -110,6 +119,7 @@ public class CollectionControllerIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].name", is("My Favorite Prompts")));
     }
+
     @Test
     @WithMockUser(username = "userOne")
     void getCollectionById_asOwner_returnsCollectionDetail() throws Exception {
@@ -118,12 +128,14 @@ public class CollectionControllerIntegrationTest {
                 .andExpect(jsonPath("$.id", is(collectionOne.getId().toString())))
                 .andExpect(jsonPath("$.name", is("My Favorite Prompts")));
     }
+
     @Test
     @WithMockUser(username = "userTwo")
     void getCollectionById_asDifferentUser_returnsNotFound() throws Exception {
         mockMvc.perform(get("/api/collections/{collectionId}", collectionOne.getId()))
                 .andExpect(status().isNotFound());
     }
+
     @Test
     @WithMockUser(username = "userOne")
     void updateCollection_asOwner_returnsOk() throws Exception {
@@ -136,6 +148,7 @@ public class CollectionControllerIntegrationTest {
                 .andExpect(jsonPath("$.name", is("Updated Name")))
                 .andExpect(jsonPath("$.description", is("Updated Description")));
     }
+
     @Test
     @WithMockUser(username = "userTwo")
     void updateCollection_asDifferentUser_returnsNotFound() throws Exception {
@@ -146,18 +159,21 @@ public class CollectionControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound());
     }
+
     @Test
     @WithMockUser(username = "userOne")
     void deleteCollection_asOwner_returnsNoContent() throws Exception {
         mockMvc.perform(delete("/api/collections/{collectionId}", collectionOne.getId()).with(csrf()))
                 .andExpect(status().isNoContent());
     }
+
     @Test
     @WithMockUser(username = "userTwo")
     void deleteCollection_asDifferentUser_returnsNotFound() throws Exception {
         mockMvc.perform(delete("/api/collections/{collectionId}", collectionOne.getId()).with(csrf()))
                 .andExpect(status().isNotFound());
     }
+
     @Test
     @WithMockUser(username = "userOne")
     void addPrompt_thenRemovePrompt_modifiesCollectionCorrectly() throws Exception {
@@ -176,6 +192,7 @@ public class CollectionControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.prompts", hasSize(0)));
     }
+
     @Test
     @WithMockUser(username = "userTwo")
     void addPromptToCollection_asDifferentUser_returnsNotFound() throws Exception {

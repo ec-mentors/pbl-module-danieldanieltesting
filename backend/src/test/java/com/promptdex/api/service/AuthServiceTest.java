@@ -1,4 +1,5 @@
 package com.promptdex.api.service;
+
 import com.promptdex.api.dto.LoginRequest;
 import com.promptdex.api.dto.RegisterRequest;
 import com.promptdex.api.model.User;
@@ -10,9 +11,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
     @Mock
@@ -23,6 +26,7 @@ class AuthServiceTest {
     private AuthenticationManager authenticationManager;
     @InjectMocks
     private AuthService authService;
+
     @Test
     void registerUser_whenUsernameAndEmailAreNew_shouldSucceed() {
         RegisterRequest request = new RegisterRequest();
@@ -36,6 +40,7 @@ class AuthServiceTest {
         authService.registerUser(request);
         verify(userRepository, times(1)).save(any(User.class));
     }
+
     @Test
     void registerUser_whenUsernameExists_shouldThrowException() {
         RegisterRequest request = new RegisterRequest();
@@ -48,6 +53,7 @@ class AuthServiceTest {
         assertEquals("Error: Username is already taken!", exception.getMessage());
         verify(userRepository, never()).save(any());
     }
+
     @Test
     void registerUser_whenEmailExists_shouldThrowException() {
         RegisterRequest request = new RegisterRequest();
@@ -61,6 +67,7 @@ class AuthServiceTest {
         assertEquals("Error: Email is already in use!", exception.getMessage());
         verify(userRepository, never()).save(any());
     }
+
     @Test
     void loginUser_shouldCallAuthenticationManager() {
         LoginRequest loginRequest = new LoginRequest("user", "password");

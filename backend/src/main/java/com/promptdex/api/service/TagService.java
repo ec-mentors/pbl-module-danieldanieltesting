@@ -1,25 +1,31 @@
 package com.promptdex.api.service;
+
 import com.promptdex.api.model.Tag;
 import com.promptdex.api.repository.TagRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 @Service
 public class TagService {
     private final TagRepository tagRepository;
+
     public TagService(TagRepository tagRepository) {
         this.tagRepository = tagRepository;
     }
+
     @Transactional(readOnly = true)
     public List<String> getAllTagNames() {
         return tagRepository.findAll(Sort.by(Sort.Direction.ASC, "name")).stream()
                 .map(Tag::getName)
                 .collect(Collectors.toList());
     }
+
     @Transactional
     public Set<Tag> findOrCreateTags(Set<String> tagNames) {
         if (tagNames == null || tagNames.isEmpty()) {

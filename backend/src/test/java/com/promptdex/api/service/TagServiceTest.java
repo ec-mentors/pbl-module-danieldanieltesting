@@ -1,4 +1,5 @@
 package com.promptdex.api.service;
+
 import com.promptdex.api.model.Tag;
 import com.promptdex.api.repository.TagRepository;
 import org.junit.jupiter.api.Test;
@@ -6,20 +7,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
 class TagServiceTest {
     @Mock
     private TagRepository tagRepository;
     @InjectMocks
     private TagService tagService;
+
     @Test
     void findOrCreateTags_withMixedCaseAndNewTags_shouldReturnCorrectSet() {
         Set<String> inputTagNames = Set.of("SciFi", "horror", "NEW-TAG");
@@ -37,6 +42,7 @@ class TagServiceTest {
         assertTrue(resultTagNames.contains("new-tag"));
         verify(tagRepository, times(1)).saveAll(any());
     }
+
     @Test
     void findOrCreateTags_withOnlyExistingTags_shouldNotCallSaveAll() {
         Set<String> inputTagNames = Set.of("Existing1", "existing2");
@@ -51,6 +57,7 @@ class TagServiceTest {
         assertEquals(2, resultTags.size());
         verify(tagRepository, never()).saveAll(any());
     }
+
     @Test
     void findOrCreateTags_withEmptySet_shouldReturnEmptySet() {
         Set<Tag> resultTags = tagService.findOrCreateTags(Collections.emptySet());

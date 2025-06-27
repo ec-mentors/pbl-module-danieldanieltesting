@@ -1,8 +1,11 @@
 package com.promptdex.api.dto;
-import jakarta.validation.constraints.NotEmpty; 
+
+import jakarta.validation.constraints.NotEmpty;
+
 import java.util.Set;
+
 public record UpdateUserRolesRequest(
-        @NotEmpty 
+        @NotEmpty
         Set<String> roles
 ) {
 }

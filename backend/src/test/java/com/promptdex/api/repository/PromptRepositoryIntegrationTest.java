@@ -1,4 +1,5 @@
 package com.promptdex.api.repository;
+
 import com.promptdex.api.model.AuthProvider;
 import com.promptdex.api.model.Prompt;
 import com.promptdex.api.model.Tag;
@@ -11,9 +12,12 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Set;
+
 import static org.assertj.core.api.Assertions.assertThat;
+
 @DataJpaTest
 public class PromptRepositoryIntegrationTest {
     @Autowired
@@ -21,6 +25,7 @@ public class PromptRepositoryIntegrationTest {
     @Autowired
     private PromptRepository promptRepository;
     private Prompt prompt1, prompt2, prompt3, prompt4;
+
     @BeforeEach
     void setUp() {
         User user = new User();
@@ -50,7 +55,7 @@ public class PromptRepositoryIntegrationTest {
         prompt2.setTags(Set.of(tagPython));
         prompt3 = new Prompt();
         prompt3.setTitle("Advanced Testing");
-        prompt3.setPromptText("A prompt about advanced java testing techniques."); 
+        prompt3.setPromptText("A prompt about advanced java testing techniques.");
         prompt3.setDescription("A prompt about testing with JUnit and Mockito.");
         prompt3.setCategory("Testing");
         prompt3.setTargetAiModel("GPT-4");
@@ -58,7 +63,7 @@ public class PromptRepositoryIntegrationTest {
         prompt3.setTags(Set.of(tagJava, tagTesting));
         prompt4 = new Prompt();
         prompt4.setTitle("SQL Queries");
-        prompt4.setPromptText("A prompt about SQL."); 
+        prompt4.setPromptText("A prompt about SQL.");
         prompt4.setDescription("A prompt about databases.");
         prompt4.setCategory("Database");
         prompt4.setTargetAiModel("Any");
@@ -69,6 +74,7 @@ public class PromptRepositoryIntegrationTest {
         entityManager.persist(prompt4);
         entityManager.flush();
     }
+
     @Test
     void whenSearchTermProvided_thenReturnMatchingPrompts() {
         Pageable pageable = PageRequest.of(0, 10);
@@ -76,6 +82,7 @@ public class PromptRepositoryIntegrationTest {
         assertThat(results.getTotalElements()).isEqualTo(2);
         assertThat(results.getContent()).extracting(Prompt::getTitle).containsExactlyInAnyOrder("Java Basics", "Advanced Testing");
     }
+
     @Test
     void whenSearchTermIsCaseInsensitive_thenReturnMatchingPrompts() {
         Pageable pageable = PageRequest.of(0, 10);
@@ -83,6 +90,7 @@ public class PromptRepositoryIntegrationTest {
         assertThat(results.getTotalElements()).isEqualTo(1);
         assertThat(results.getContent().get(0).getTitle()).isEqualTo("Java Basics");
     }
+
     @Test
     void whenTagsProvided_thenReturnMatchingPrompts() {
         Pageable pageable = PageRequest.of(0, 10);
@@ -90,6 +98,7 @@ public class PromptRepositoryIntegrationTest {
         assertThat(results.getTotalElements()).isEqualTo(2);
         assertThat(results.getContent()).extracting(Prompt::getTitle).containsExactlyInAnyOrder("Java Basics", "Advanced Testing");
     }
+
     @Test
     void whenSearchTermAndTagsProvided_thenReturnMatchingPrompts() {
         Pageable pageable = PageRequest.of(0, 10);
@@ -97,12 +106,14 @@ public class PromptRepositoryIntegrationTest {
         assertThat(results.getTotalElements()).isEqualTo(1);
         assertThat(results.getContent().get(0).getTitle()).isEqualTo("Advanced Testing");
     }
+
     @Test
     void whenNoFiltersProvided_thenReturnAllPrompts() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Prompt> results = promptRepository.searchAndPagePrompts(null, null, pageable);
         assertThat(results.getTotalElements()).isEqualTo(4);
     }
+
     @Test
     void whenPaginationIsApplied_thenReturnCorrectSlice() {
         Pageable pageable = PageRequest.of(0, 2);
