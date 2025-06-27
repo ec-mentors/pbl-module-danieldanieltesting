@@ -1,5 +1,19 @@
+
+#fullstackcode
 backend_code.txt
-.cb_tracked_files
-tracker.py
 frontend_code.txt
+
+
+
+#commands
 commands.txt
+
+
+
+### trackerfiles
+.cb_tracked_files
+.cb_tracker_data.json
+
+### trackerscripts
+trackerpro.py
+tracker.py
