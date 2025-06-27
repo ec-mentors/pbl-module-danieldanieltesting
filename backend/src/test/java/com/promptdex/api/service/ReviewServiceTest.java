@@ -1,8 +1,9 @@
 package com.promptdex.api.service;
+
 import com.promptdex.api.dto.CreateReviewRequest;
 import com.promptdex.api.dto.ReviewDto;
 import com.promptdex.api.dto.UpdateReviewRequest;
-import com.promptdex.api.exception.ResourceNotFoundException; 
+import com.promptdex.api.exception.ResourceNotFoundException;
 import com.promptdex.api.exception.ReviewAlreadyExistsException;
 import com.promptdex.api.model.Prompt;
 import com.promptdex.api.model.Review;
@@ -19,15 +20,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
 public class ReviewServiceTest {
     @Mock
@@ -48,6 +52,7 @@ public class ReviewServiceTest {
     private UpdateReviewRequest updateRequest;
     private UUID promptId;
     private UUID reviewId;
+
     @BeforeEach
     void setUp() {
         UUID authorId = UUID.randomUUID();
@@ -74,11 +79,13 @@ public class ReviewServiceTest {
         createRequest = new CreateReviewRequest(5, "Excellent!");
         updateRequest = new UpdateReviewRequest(3, "Okay prompt.");
     }
+
     private void mockUpdatePromptAverageRatingInteractions(UUID targetPromptId, Double newAverageRating) {
         when(promptRepository.findById(targetPromptId)).thenReturn(Optional.of(prompt));
         when(promptRepository.findAverageRatingByPromptId(targetPromptId)).thenReturn(Optional.ofNullable(newAverageRating));
         when(promptRepository.save(any(Prompt.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
+
     @Test
     void createReview_whenUserIsNotAuthorAndHasNotReviewed_shouldSucceed() {
         when(userDetails.getUsername()).thenReturn(reviewer.getUsername());
@@ -110,16 +117,18 @@ public class ReviewServiceTest {
         verify(promptRepository).findAverageRatingByPromptId(promptId);
         verify(promptRepository).save(prompt);
     }
+
     @Test
     void createReview_whenPromptNotFound_shouldThrowResourceNotFoundException() {
-        when(promptRepository.findById(promptId)).thenReturn(Optional.empty()); 
+        when(promptRepository.findById(promptId)).thenReturn(Optional.empty());
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
             reviewService.createReview(promptId, createRequest, userDetails);
         });
         assertThat(exception.getMessage()).contains("Prompt not found with id: " + promptId);
         verify(reviewRepository, never()).saveAndFlush(any());
-        verify(userRepository, never()).findByUsername(any()); 
+        verify(userRepository, never()).findByUsername(any());
     }
+
     @Test
     void createReview_whenUserIsAuthor_shouldThrowAccessDeniedException() {
         when(userDetails.getUsername()).thenReturn(promptAuthor.getUsername());
@@ -131,6 +140,7 @@ public class ReviewServiceTest {
         assertEquals("You cannot review your own prompt.", exception.getMessage());
         verify(reviewRepository, never()).saveAndFlush(any());
     }
+
     @Test
     void createReview_whenUserHasAlreadyReviewed_shouldThrowReviewAlreadyExistsException() {
         when(userDetails.getUsername()).thenReturn(reviewer.getUsername());
@@ -143,6 +153,7 @@ public class ReviewServiceTest {
         assertEquals("You have already reviewed this prompt.", exception.getMessage());
         verify(reviewRepository, never()).saveAndFlush(any());
     }
+
     @Test
     void updateReview_whenUserIsAuthorOfReview_shouldSucceed() {
         when(userDetails.getUsername()).thenReturn(reviewer.getUsername());
@@ -165,16 +176,18 @@ public class ReviewServiceTest {
         verify(promptRepository).findAverageRatingByPromptId(promptId);
         verify(promptRepository).save(prompt);
     }
+
     @Test
     void updateReview_whenReviewNotFound_shouldThrowResourceNotFoundException() {
-        when(reviewRepository.findById(reviewId)).thenReturn(Optional.empty()); 
+        when(reviewRepository.findById(reviewId)).thenReturn(Optional.empty());
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
             reviewService.updateReview(reviewId, updateRequest, userDetails);
         });
         assertThat(exception.getMessage()).contains("Review not found with id: " + reviewId);
         verify(reviewRepository, never()).save(any());
-        verify(userRepository, never()).findByUsername(any()); 
+        verify(userRepository, never()).findByUsername(any());
     }
+
     @Test
     void updateReview_whenUserIsNotAuthorOfReview_shouldThrowAccessDeniedException() {
         User otherUser = new User();
@@ -189,6 +202,7 @@ public class ReviewServiceTest {
         assertEquals("You do not have permission to edit this review.", exception.getMessage());
         verify(reviewRepository, never()).save(any());
     }
+
     @Test
     void deleteReview_whenUserIsAuthorOfReview_shouldSucceed() {
         when(userDetails.getUsername()).thenReturn(reviewer.getUsername());
@@ -202,16 +216,18 @@ public class ReviewServiceTest {
         verify(promptRepository).findAverageRatingByPromptId(promptId);
         verify(promptRepository).save(prompt);
     }
+
     @Test
     void deleteReview_whenReviewNotFound_shouldThrowResourceNotFoundException() {
-        when(reviewRepository.findById(reviewId)).thenReturn(Optional.empty()); 
+        when(reviewRepository.findById(reviewId)).thenReturn(Optional.empty());
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
             reviewService.deleteReview(reviewId, userDetails);
         });
         assertThat(exception.getMessage()).contains("Review not found with id: " + reviewId);
         verify(reviewRepository, never()).delete(any());
-        verify(userRepository, never()).findByUsername(any()); 
+        verify(userRepository, never()).findByUsername(any());
     }
+
     @Test
     void deleteReview_whenUserIsNotAuthorOfReview_shouldThrowAccessDeniedException() {
         User otherUser = new User();

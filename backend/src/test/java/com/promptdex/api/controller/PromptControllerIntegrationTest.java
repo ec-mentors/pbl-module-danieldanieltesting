@@ -1,4 +1,5 @@
 package com.promptdex.api.controller;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.promptdex.api.dto.CreatePromptRequest;
 import com.promptdex.api.model.AuthProvider;
@@ -19,13 +20,16 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+
 import static org.hamcrest.Matchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -46,6 +50,7 @@ class PromptControllerIntegrationTest {
     private User otherUser;
     private Prompt prompt1;
     private Prompt prompt2;
+
     @BeforeEach
     void setUp() {
         testAuthor = new User();
@@ -69,7 +74,7 @@ class PromptControllerIntegrationTest {
         prompt1.setTargetAiModel("GPT-4");
         prompt1.setCategory("Development");
         prompt1.setAuthor(testAuthor);
-        prompt1.getTags().add(tag1); 
+        prompt1.getTags().add(tag1);
         prompt2 = new Prompt();
         prompt2.setTitle("Java Prompt Title 2");
         prompt2.setPromptText("Explain dependency injection in Java.");
@@ -80,6 +85,7 @@ class PromptControllerIntegrationTest {
         prompt2.getTags().add(tag2);
         promptRepository.saveAllAndFlush(List.of(prompt1, prompt2));
     }
+
     @Test
     void getPromptById_whenPromptExists_returnsPrompt() throws Exception {
         mockMvc.perform(get("/api/prompts/{id}", prompt1.getId()))
@@ -88,6 +94,7 @@ class PromptControllerIntegrationTest {
                 .andExpect(jsonPath("$.title", is("Test Prompt Title 1")))
                 .andExpect(jsonPath("$.authorUsername", is("testAuthor")));
     }
+
     @Test
     void createPrompt_withoutAuth_returnsUnauthorized() throws Exception {
         CreatePromptRequest request = new CreatePromptRequest("New API Prompt", "Text...", "Description...", "GPT-4", "Testing");
@@ -97,6 +104,7 @@ class PromptControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
     }
+
     @Test
     @WithMockUser(username = "testAuthor")
     void updatePrompt_asAuthor_returnsOk() throws Exception {
@@ -108,12 +116,14 @@ class PromptControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title", is("Updated Title")));
     }
+
     @Test
     @WithMockUser(username = "testAuthor")
     void deletePrompt_asAuthor_returnsNoContent() throws Exception {
         mockMvc.perform(delete("/api/prompts/{id}", prompt1.getId()).with(csrf()))
                 .andExpect(status().isNoContent());
     }
+
     @Test
     @WithMockUser(username = "testAuthor")
     void createPrompt_withValidData_returnsCreated() throws Exception {
@@ -124,6 +134,7 @@ class PromptControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
     }
+
     @Test
     @WithMockUser(username = "otherUser")
     void updatePrompt_asDifferentUser_returnsForbidden() throws Exception {
@@ -134,18 +145,21 @@ class PromptControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
     }
+
     @Test
     @WithMockUser(username = "otherUser")
     void deletePrompt_asDifferentUser_returnsForbidden() throws Exception {
         mockMvc.perform(delete("/api/prompts/{id}", prompt1.getId()).with(csrf()))
                 .andExpect(status().isForbidden());
     }
+
     @Test
     @WithMockUser(username = "otherUser")
     void bookmarkPrompt_whenNotBookmarked_returnsOk() throws Exception {
         mockMvc.perform(post("/api/prompts/{id}/bookmark", prompt1.getId()).with(csrf()))
                 .andExpect(status().isOk());
     }
+
     @Test
     @WithMockUser(username = "otherUser")
     void unbookmarkPrompt_whenBookmarked_returnsNoContent() throws Exception {

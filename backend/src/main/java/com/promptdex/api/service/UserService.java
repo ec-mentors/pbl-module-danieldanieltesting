@@ -1,4 +1,5 @@
 package com.promptdex.api.service;
+
 import com.promptdex.api.dto.ProfileDto;
 import com.promptdex.api.dto.UserAdminViewDto;
 import com.promptdex.api.exception.ResourceNotFoundException;
@@ -11,18 +12,22 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils; 
+import org.springframework.util.StringUtils;
+
 import java.util.Set;
 import java.util.UUID;
+
 @Service
-@Transactional 
+@Transactional
 public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+
     public UserService(UserRepository userRepository, UserMapper userMapper) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
     }
+
     @Transactional(readOnly = true)
     public ProfileDto getProfile(String username, UserDetails principal) {
         User targetUser = userRepository.findByUsername(username)
@@ -34,6 +39,7 @@ public class UserService {
         }
         return userMapper.toProfileDto(targetUser, currentUser);
     }
+
     public ProfileDto followUser(String usernameToFollow, UserDetails principal) {
         if (principal.getUsername().equals(usernameToFollow)) {
             throw new IllegalArgumentException("You cannot follow yourself.");
@@ -45,6 +51,7 @@ public class UserService {
         currentUser.follow(userToFollow);
         return userMapper.toProfileDto(userToFollow, currentUser);
     }
+
     public ProfileDto unfollowUser(String usernameToUnfollow, UserDetails principal) {
         if (principal.getUsername().equals(usernameToUnfollow)) {
             throw new IllegalArgumentException("You cannot unfollow yourself.");
@@ -56,10 +63,11 @@ public class UserService {
         currentUser.unfollow(userToUnfollow);
         return userMapper.toProfileDto(userToUnfollow, currentUser);
     }
+
     @Transactional(readOnly = true)
     public Page<UserAdminViewDto> getAllUsersAsAdmin(String searchTerm, Pageable pageable) {
         Page<User> usersPage;
-        if (StringUtils.hasText(searchTerm)) { 
+        if (StringUtils.hasText(searchTerm)) {
             usersPage = userRepository.findAllAdminSearch(searchTerm.trim(), pageable);
         } else {
             usersPage = userRepository.findAll(pageable);
@@ -72,6 +80,7 @@ public class UserService {
                 user.getProvider()
         ));
     }
+
     @PreAuthorize("hasRole('ADMIN')")
     public UserAdminViewDto updateUserRoles(UUID userId, Set<String> newRoles) {
         User userToUpdate = userRepository.findById(userId)

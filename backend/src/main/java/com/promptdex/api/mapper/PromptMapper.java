@@ -1,13 +1,16 @@
 package com.promptdex.api.mapper;
+
 import com.promptdex.api.dto.PromptDto;
 import com.promptdex.api.dto.ReviewDto;
 import com.promptdex.api.model.Prompt;
 import com.promptdex.api.model.Tag;
 import com.promptdex.api.model.User;
 import org.springframework.stereotype.Component;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
 @Component
 public class PromptMapper {
     public PromptDto toDto(Prompt prompt, User user) {
@@ -25,8 +28,8 @@ public class PromptMapper {
                 review.getRating(),
                 review.getComment(),
                 review.getUser().getUsername(),
-                review.getCreatedAt(), 
-                review.getUpdatedAt()  
+                review.getCreatedAt(),
+                review.getUpdatedAt()
         )).collect(Collectors.toList())
                 : List.of();
         double averageRating = prompt.getReviews() != null && !prompt.getReviews().isEmpty()
@@ -40,8 +43,8 @@ public class PromptMapper {
                 prompt.getTargetAiModel(),
                 prompt.getCategory(),
                 prompt.getAuthor().getUsername(),
-                prompt.getCreatedAt(), 
-                prompt.getUpdatedAt(), 
+                prompt.getCreatedAt(),
+                prompt.getUpdatedAt(),
                 averageRating,
                 reviewDtos,
                 tagNames,

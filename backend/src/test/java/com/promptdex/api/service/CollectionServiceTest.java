@@ -1,4 +1,5 @@
 package com.promptdex.api.service;
+
 import com.promptdex.api.dto.CreateCollectionRequest;
 import com.promptdex.api.exception.CollectionAlreadyExistsException;
 import com.promptdex.api.exception.ResourceNotFoundException;
@@ -16,11 +17,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
+
 import java.util.Optional;
 import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
 class CollectionServiceTest {
     @Mock
@@ -30,13 +34,14 @@ class CollectionServiceTest {
     @Mock
     private PromptRepository promptRepository;
     @Mock
-    private PromptMapper promptMapper; 
+    private PromptMapper promptMapper;
     @InjectMocks
     private CollectionService collectionService;
     private User user;
     private Collection collection;
     private Prompt prompt;
     private String username = "testUser";
+
     @BeforeEach
     void setUp() {
         user = new User();
@@ -47,6 +52,7 @@ class CollectionServiceTest {
         prompt = new Prompt();
         prompt.setId(UUID.randomUUID());
     }
+
     @Test
     void createCollection_whenNameIsUniqueForUser_shouldSucceed() {
         CreateCollectionRequest request = new CreateCollectionRequest("New Collection", "Desc");
@@ -56,6 +62,7 @@ class CollectionServiceTest {
         collectionService.createCollection(request, username);
         verify(collectionRepository, times(1)).saveAndFlush(any(Collection.class));
     }
+
     @Test
     void createCollection_whenNameIsNotUniqueForUser_shouldThrowException() {
         CreateCollectionRequest request = new CreateCollectionRequest("Existing Collection", "Desc");
@@ -65,6 +72,7 @@ class CollectionServiceTest {
             collectionService.createCollection(request, username);
         });
     }
+
     @Test
     void addPromptToCollection_whenUserOwnsCollection_shouldAddPrompt() {
         when(collectionRepository.findByIdAndOwner_Username(collection.getId(), username)).thenReturn(Optional.of(collection));
@@ -75,18 +83,21 @@ class CollectionServiceTest {
         assertTrue(collection.getPrompts().contains(prompt));
         verify(collectionRepository, times(1)).save(collection);
     }
+
     @Test
-    void getCollectionById_whenUserDoesNotOwnCollection_shouldThrowResourceNotFoundException() { 
+    void getCollectionById_whenUserDoesNotOwnCollection_shouldThrowResourceNotFoundException() {
         assertThrows(ResourceNotFoundException.class, () -> {
             collectionService.getCollectionById(collection.getId(), "someOtherUser");
         });
     }
+
     @Test
     void deleteCollection_whenUserOwnsCollection_shouldSucceed() {
         when(collectionRepository.findByIdAndOwner_Username(collection.getId(), username)).thenReturn(Optional.of(collection));
         collectionService.deleteCollection(collection.getId(), username);
         verify(collectionRepository, times(1)).delete(collection);
     }
+
     @Test
     void deleteCollection_whenUserDoesNotOwnCollection_shouldThrowResourceNotFound() {
         when(collectionRepository.findByIdAndOwner_Username(collection.getId(), username)).thenReturn(Optional.empty());
